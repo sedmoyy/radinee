@@ -25,8 +25,8 @@ public class ModuleManager {
     private final KeyBinding freeLookKey;
 
     public enum Theme {
-        OCEAN("Ocean", 0xFF101F29, 0xFF0E2A38, t.card, t.accent, 0xFF9CCBD9),
-        SNOW("White", 0xFFF4F4F4, t.accent, 0xFFE3E3E3, 0xFF202020, 0xFF666666),
+        OCEAN("Ocean", 0xFF101F29, 0xFF0E2A38, 0xFF16384B, 0xFF37BDEB, 0xFF9CCBD9),
+        SNOW("White", 0xFFF4F4F4, 0xFFFFFFFF, 0xFFE3E3E3, 0xFF202020, 0xFF666666),
         LIGHT_BLACK("Light Black", 0xFF171717, 0xFF202020, 0xFF303030, 0xFFE8E8E8, 0xFFAAAAAA),
         GLASS("Glass", 0xAA18202A, 0x992A3440, 0x884A5A6A, 0xFFE8F4FF, 0xFFB5C9D8),
         RAINY("Rainy", 0xFF16212A, 0xFF1D2D38, 0xFF2A3D4A, 0xFF78A9C2, 0xFFA8BBC5),
@@ -179,7 +179,7 @@ public class ModuleManager {
                     ctx.fill(panelX + 10, cy, panelX + sideW - 10, cy + 34, 0xFF16384B);
                 }
                 ctx.drawTextWithShadow(textRenderer, categories.get(i), panelX + 22, cy + 11,
-                    selected ? 0xFF37BDEB : t.muted);
+                    selected ? t.accent : t.muted);
                 cy += 38;
             }
 
@@ -205,7 +205,7 @@ public class ModuleManager {
                 boolean hover = mouseX >= contentX && mouseX < contentX + contentW
                     && mouseY >= y && mouseY < y + 48;
                 ctx.fill(contentX, y, contentX + contentW, y + 48,
-                    hover ? 0xFF16384B : t.card);
+                    hover ? t.side : t.card);
 
                 ctx.drawTextWithShadow(textRenderer, module.getName(), contentX + 12, y + 8,
                     module.isEnabled() ? 0xFF37BDEB : 0xFFFFFFFF);
