@@ -51,6 +51,11 @@ public class ModuleManager {
     }
 
     private Theme theme = Theme.OCEAN;
+    private int hudOpacity = 100;
+
+    public int getHudOpacity() { return hudOpacity; }
+    public void setHudOpacity(int value) { hudOpacity = Math.max(0, Math.min(100, value)); }
+    private int hudColor(int rgb) { return ((hudOpacity * 255 / 100) << 24) | (rgb & 0x00FFFFFF); }
 
     public Theme getTheme() {
         return theme;
@@ -332,7 +337,7 @@ public class ModuleManager {
                     x + 20, line + 20, 0xFF9DB5C4);
             } else if (module instanceof NoHurtCamModule nh) {
                 drawSlider(ctx, x + 20, line, w - 40, "Shake reduction", nh.reduction);
-            } else if (module instanceof FreeLookModule fl) {
+            } else if (module instanceof ArmorHudModule ah) {\n                drawSlider(ctx, x + 20, line + 50, w - 40, "HUD opacity", manager.hudOpacity);\n            } else if (module instanceof TargetEspModule te) {\n                drawSlider(ctx, x + 20, line + 50, w - 40, "HUD opacity", manager.hudOpacity);\n            } else if (module instanceof FreeLookModule fl) {
                 String state = fl.rebinding ? "PRESS A KEY OR CLICK A MOUSE BUTTON" : fl.keyName();
                 ctx.drawTextWithShadow(textRenderer, "Hold key: " + state, x + 20, line, 0xFFFFFFFF);
                 ctx.drawTextWithShadow(textRenderer, "Right click this line to rebind",
@@ -376,7 +381,7 @@ public class ModuleManager {
                 }
             }
 
-            if (module instanceof FullbrightModule fb && my >= line + 12 && my <= line + 40) {
+            if ((module instanceof ArmorHudModule || module instanceof TargetEspModule) && my >= line + 62 && my <= line + 92) {\n                manager.setHudOpacity((int) (((mx - (x + 20)) / (double) (w - 40)) * 100));\n                return true;\n            }\n\n            if (module instanceof FullbrightModule fb && my >= line + 12 && my <= line + 40) {
                 fb.brightness = clamp((int) (((mx - (x + 20)) / (double) (w - 40)) * 100));
                 return true;
             }
@@ -493,13 +498,13 @@ public class ModuleManager {
             int barWidth = 120;
             int filled = Math.round(barWidth * Math.min(1.0f, health / maxHealth));
 
-            ctx.fill(x, y, x + 150, y + 42, 0xCC101820);
+            ctx.fill(x, y, x + 150, y + 42, hudColor(0x101820));
             ctx.drawTextWithShadow(client.textRenderer, living.getDisplayName(),
                 x + 8, y + 6, 0xFFFFFFFF);
             ctx.drawTextWithShadow(client.textRenderer,
                 String.format("%.1f HP", health), x + 8, y + 20, 0xFF9DB5C4);
-            ctx.fill(x + 8, y + 34, x + 8 + barWidth, y + 38, 0xFF3A3A3A);
-            ctx.fill(x + 8, y + 34, x + 8 + filled, y + 38, 0xFF55FF55);
+            ctx.fill(x + 8, y + 34, x + 8 + barWidth, y + 38, hudColor(0x3A3A3A));
+            ctx.fill(x + 8, y + 34, x + 8 + filled, y + 38, hudColor(0x55FF55));
         }
     }
 
@@ -545,14 +550,14 @@ public class ModuleManager {
                             slotX, y + 18, color);
                     } else {
                         int width = Math.max(0, Math.min(28, Math.round(28.0f * percent / 100.0f)));
-                        ctx.fill(slotX, y + 18, slotX + 28, y + 22, 0xFF333333);
-                        ctx.fill(slotX, y + 18, slotX + width, y + 22, color);
+                        ctx.fill(slotX, y + 18, slotX + 28, y + 22, hudColor(0x333333));
+                        ctx.fill(slotX, y + 18, slotX + width, y + 22, withAlpha(color));
                     }
                 }
             }
         }
 
-        static int colorFor(ItemStack stack) {
+        int withAlpha(int color) {\n            return ((hudOpacity * 255 / 100) << 24) | (color & 0x00FFFFFF);\n        }\n\n        static int colorFor(ItemStack stack) {
             if (stack.isEmpty() || !stack.isDamageable()) return 0xFFFFFFFF;
 
             float p = (stack.getMaxDamage() - stack.getDamage()) / (float) stack.getMaxDamage();
