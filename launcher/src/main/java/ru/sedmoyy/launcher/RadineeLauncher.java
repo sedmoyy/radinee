@@ -1,5 +1,10 @@
 package ru.sedmoyy.launcher;
 
+import net.raphimc.minecraftauth.MinecraftAuth;
+import net.raphimc.minecraftauth.java.JavaAuthManager;
+import net.raphimc.minecraftauth.msa.model.MsaDeviceCode;
+import net.raphimc.minecraftauth.msa.service.impl.DeviceCodeMsaAuthService;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -7,14 +12,17 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.function.Consumer;
 import java.util.prefs.Preferences;
 
 public final class RadineeLauncher {
     private static final String NAME = "Radinee Client";
     private static final Path ROOT = Path.of(System.getProperty("user.home"), ".radinee-client");
     private static final Path GAME = ROOT.resolve("game");
+    private static final Path AUTH_FILE = ROOT.resolve("microsoft-auth.json");
     private static final String MC_VERSION = "1.21.11";
     private static final String FABRIC_INSTALLER =
             "https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.1.2/fabric-installer-1.1.2.jar";
@@ -25,6 +33,7 @@ public final class RadineeLauncher {
     private final JSpinner ram =
             new JSpinner(new SpinnerNumberModel(PREFS.getInt("ram", 4096), 2048, 16384, 512));
     private final JLabel status = new JLabel("Ready to launch.");
+    private volatile JavaAuthManager authManager;
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new RadineeLauncher().show());
@@ -108,6 +117,14 @@ public final class RadineeLauncher {
         card.add(ram);
         card.add(Box.createVerticalStrut(22));
 
+        JButton login = new JButton("Войти через Microsoft");
+        login.setAlignmentX(Component.LEFT_ALIGNMENT);
+        login.setMaximumSize(new Dimension(260, 42));
+        login.setFocusPainted(false);
+        login.addActionListener(e -> loginMicrosoft());
+        card.add(login);
+        card.add(Box.createVerticalStrut(10));
+
         JButton play = new JButton("Запустить");
         play.setAlignmentX(Component.LEFT_ALIGNMENT);
         play.setPreferredSize(new Dimension(220, 46));
@@ -158,56 +175,146 @@ public final class RadineeLauncher {
         return Files.exists(javaHome) ? javaHome.toString() : exe;
     }
 
+    private void loginMicrosoft() {
+        status.setText("Ожидание входа Microsoft...");
+
+        Thread thread = new Thread(() -> {
+            try {
+                Files.createDirectories(ROOT);
+
+                HttpClient httpClient = MinecraftAuth.createHttpClient("Radinee Client/" + MC_VERSION);
+                JavaAuthManager manager;
+
+                if (Files.exists(AUTH_FILE)) {
+                    try {
+                        String json = Files.readString(AUTH_FILE, StandardCharsets.UTF_8);
+                        manager = JavaAuthManager.fromJson(httpClient,
+                                com.google.gson.JsonParser.parseString(json).getAsJsonObject());
+                        manager.getMinecraftToken().getUpToDate();
+                    } catch (Exception ignored) {
+                        manager = loginWithDeviceCode(httpClient);
+                    }
+                } else {
+                    manager = loginWithDeviceCode(httpClient);
+                }
+
+                authManager = manager;
+                saveAuth(manager);
+
+                String profileName = manager.getMinecraftProfile().getUpToDate().getName();
+                SwingUtilities.invokeLater(() -> {
+                    username.setText(profileName);
+                    PREFS.put("username", profileName);
+                    status.setText("Выполнен вход: " + profileName);
+                });
+            } catch (Exception ex) {
+                SwingUtilities.invokeLater(() ->
+                        status.setText("Ошибка входа: " + ex.getMessage()));
+            }
+        }, "radinee-microsoft-login");
+
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private JavaAuthManager loginWithDeviceCode(HttpClient httpClient) {
+        Consumer<MsaDeviceCode> callback = code -> SwingUtilities.invokeLater(() -> {
+            String url = code.getDirectVerificationUri();
+            status.setText("Открой ссылку Microsoft для входа.");
+
+            JTextArea area = new JTextArea(
+                    "Открой эту ссылку в браузере:\n\n" + url +
+                    "\n\nВойди в свой Microsoft-аккаунт и вернись сюда."
+            );
+            area.setEditable(false);
+            area.setLineWrap(true);
+            area.setWrapStyleWord(true);
+            area.setBorder(new EmptyBorder(12, 12, 12, 12));
+
+            JButton open = new JButton("Открыть Microsoft");
+            open.addActionListener(e -> {
+                try {
+                    Desktop.getDesktop().browse(URI.create(url));
+                } catch (Exception ignored) {}
+            });
+
+            JPanel panel = new JPanel(new BorderLayout(0, 10));
+            panel.add(area, BorderLayout.CENTER);
+            panel.add(open, BorderLayout.SOUTH);
+
+            JOptionPane.showMessageDialog(null, panel, "Вход Microsoft", JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        return JavaAuthManager.create(httpClient)
+                .login(DeviceCodeMsaAuthService::new, callback);
+    }
+
+    private void saveAuth(JavaAuthManager manager) throws Exception {
+        Files.writeString(
+                AUTH_FILE,
+                JavaAuthManager.toJson(manager).toString(),
+                StandardCharsets.UTF_8
+        );
+    }
+
     private void launch() {
         String name = username.getText().trim();
         if (name.isEmpty()) {
-            status.setText("Enter your Minecraft username first.");
+            status.setText("Сначала войди через Microsoft.");
             return;
         }
 
         PREFS.put("username", name);
         PREFS.putInt("ram", (Integer) ram.getValue());
-
         status.setText("Подготовка Radinee Client...");
 
-        try {
-            Files.createDirectories(GAME);
-            Path installer = ROOT.resolve("fabric-installer.jar");
+        Thread thread = new Thread(() -> {
+            try {
+                if (authManager == null) {
+                    SwingUtilities.invokeLater(() -> status.setText("Сначала войди через Microsoft."));
+                    return;
+                }
 
-            if (!Files.exists(installer)) {
-                status.setText("Скачивание Fabric Installer...");
-                HttpClient http = HttpClient.newHttpClient();
-                http.send(
-                        HttpRequest.newBuilder(URI.create(FABRIC_INSTALLER)).build(),
-                        HttpResponse.BodyHandlers.ofFile(installer)
-                );
+                authManager.getMinecraftToken().getUpToDate();
+                saveAuth(authManager);
+
+                Files.createDirectories(GAME);
+                Path installer = ROOT.resolve("fabric-installer.jar");
+
+                if (!Files.exists(installer)) {
+                    SwingUtilities.invokeLater(() -> status.setText("Скачивание Fabric Installer..."));
+                    HttpClient http = HttpClient.newHttpClient();
+                    http.send(
+                            HttpRequest.newBuilder(URI.create(FABRIC_INSTALLER)).build(),
+                            HttpResponse.BodyHandlers.ofFile(installer)
+                    );
+                }
+
+                SwingUtilities.invokeLater(() ->
+                        status.setText("Установка Fabric " + MC_VERSION + "..."));
+
+                Process process = new ProcessBuilder(
+                        javaBin(), "-jar", installer.toString(),
+                        "client", "-mcversion", MC_VERSION,
+                        "-dir", GAME.toString(), "-noprofile"
+                ).redirectErrorStream(true).start();
+
+                int code = process.waitFor();
+                if (code != 0) {
+                    throw new IllegalStateException(
+                            "Fabric installer завершился с кодом " + code);
+                }
+
+                SwingUtilities.invokeLater(() -> status.setText(
+                        "Аккаунт авторизован. Fabric установлен. Готов к запуску."
+                ));
+            } catch (Exception ex) {
+                SwingUtilities.invokeLater(() ->
+                        status.setText("Ошибка: " + ex.getMessage()));
             }
+        }, "radinee-launch-preparation");
 
-            status.setText("Установка Fabric " + MC_VERSION + "...");
-            Process process = new ProcessBuilder(
-                    javaBin(), "-jar", installer.toString(),
-                    "client", "-mcversion", MC_VERSION,
-                    "-dir", GAME.toString(), "-noprofile"
-            ).redirectErrorStream(true).start();
-
-            int code = process.waitFor();
-            if (code != 0) {
-                throw new IllegalStateException(
-                        "Fabric installer завершился с кодом " + code);
-            }
-
-            status.setText("Fabric установлен. Требуется вход в Microsoft.");
-            JOptionPane.showMessageDialog(
-                    null,
-                    "Radinee Client подготовлен.\n\n" +
-                    "Minecraft: " + MC_VERSION + "\n" +
-                    "Папка игры:\n" + GAME + "\n\n" +
-                    "Следующий этап — авторизация Microsoft и запуск Java-клиента.",
-                    NAME,
-                    JOptionPane.INFORMATION_MESSAGE
-            );
-        } catch (Exception ex) {
-            status.setText("Ошибка: " + ex.getMessage());
-        }
+        thread.setDaemon(true);
+        thread.start();
     }
 }
