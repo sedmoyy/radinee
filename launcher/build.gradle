@@ -9,6 +9,10 @@ repositories {
     mavenCentral()
 }
 
+dependencies {
+    implementation 'net.raphimc:MinecraftAuth:5.0.2'
+}
+
 application {
     mainClass = 'ru.sedmoyy.launcher.RadineeLauncher'
 }
