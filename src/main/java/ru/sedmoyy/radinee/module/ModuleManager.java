@@ -55,6 +55,17 @@ public class ModuleManager {
         else if (client.currentScreen == null) client.setScreen(new VisualsScreen(this));
     }
 
+    public void renderHud(DrawContext ctx) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return;
+
+        Module armor = get("Armor HUD");
+        if (armor instanceof ArmorHudModule ah && armor.isEnabled()) ah.render(ctx, client);
+
+        Module target = get("Target ESP");
+        if (target instanceof TargetEspModule te && target.isEnabled() && te.showTargetHud) te.render(ctx, client);
+    }
+
     public boolean isFreeLookActive() {\n        Module m = get("Free Look");\n        return m != null && m.getKeyBinding() != null && m.getKeyBinding().isPressed();\n    }\n\n    public Module get(String name) {
         for (Module m : modules) if (m.getName().equals(name)) return m;
         return null;
