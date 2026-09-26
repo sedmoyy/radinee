@@ -16,14 +16,15 @@ public class ModuleManager {
         modules.add(new VisualModule("Player ESP", "Visuals", "Highlights players around you"));
         modules.add(new VisualModule("Item ESP", "Visuals", "Highlights dropped items"));
         modules.add(new VisualModule("NameTags", "Visuals", "Enhanced entity name tags"));
-        modules.add(new VisualModule("Target ESP", "Visuals", "Target highlight effect"));
-        modules.add(new VisualModule("Armor HUD", "Visuals", "Shows your armor and durability"));
+        modules.add(new VisualModule("Target ESP", "Combat", "Target highlight effect"));
+        modules.add(new VisualModule("Armor HUD", "HUD", "Shows your armor and durability"));
         modules.add(new VisualModule("China Hat", "Visuals", "Cosmetic player hat"));
         modules.add(new VisualModule("Hit Color", "Visuals", "Custom damage tint"));
         modules.add(new VisualModule("Block Outline", "Visuals", "Custom block selection outline"));
         modules.add(new FullbrightModule());
-        modules.add(new VisualModule("No HurtCam", "Visuals", "Removes camera shake"));
-        modules.add(new VisualModule("Crosshair", "Visuals", "Custom crosshair"));
+        modules.add(new VisualModule("Player Model", "Player", "Client-side player model options"));
+        modules.add(new VisualModule("No HurtCam", "Player", "Removes camera shake"));
+        modules.add(new VisualModule("Crosshair", "HUD", "Custom crosshair"));
         modules.add(new VisualModule("FPS Counter", "HUD", "FPS indicator"));
         modules.add(new VisualModule("CPS Counter", "HUD", "Clicks per second"));
         modules.add(new VisualModule("Keystrokes", "HUD", "Movement and mouse keys"));
@@ -42,7 +43,7 @@ public class ModuleManager {
 
     private static class VisualsScreen extends Screen {
         private final ModuleManager manager;
-        private final List<String> categories = Arrays.asList("Visuals", "HUD", "Themes");
+        private final List<String> categories = Arrays.asList("Visuals", "Combat", "HUD", "Player");
         private int category = 0;
         private String search = "";
         private int panelX, panelY, panelW, panelH;
@@ -87,12 +88,27 @@ public class ModuleManager {
                 cy += 38;
             }
 
+            int themeY = panelY + panelH - 58;
+            boolean themeHover = mouseX >= panelX + 10 && mouseX < panelX + sideW - 10
+                && mouseY >= themeY && mouseY < themeY + 34;
+            if (themeHover) ctx.fill(panelX + 10, themeY, panelX + sideW - 10, themeY + 34, theme.hover());
+            ctx.drawTextWithShadow(textRenderer, "Theme: " + theme.displayName,
+                panelX + 18, themeY + 11, theme.accentText());
+
+            int themeY = panelY + panelH - 58;
+            if (mouseX >= panelX + 10 && mouseX < panelX + sideW - 10
+                && mouseY >= themeY && mouseY < themeY + 34) {
+                Theme[] themes = Theme.values();
+                theme = themes[(theme.ordinal() + 1) % themes.length];
+                return true;
+            }
+
             int contentX = panelX + sideW + 18;
             int contentW = panelW - sideW - 36;
             ctx.drawTextWithShadow(textRenderer, categories.get(category), contentX, panelY + 20, theme.primaryText());
-            ctx.drawTextWithShadow(textRenderer, category == 2 ? "Choose your client theme" : "Visual modules", contentX, panelY + 35, theme.secondaryText());
+            ctx.drawTextWithShadow(textRenderer, "Modules and settings", contentX, panelY + 35, theme.secondaryText());
 
-            if (category == 2) {
+            if (false) {
                 renderThemes(ctx, mouseX, mouseY, contentX, contentW);
                 ctx.drawTextWithShadow(textRenderer, "Theme changes apply instantly", contentX, panelY + panelH - 34, theme.secondaryText());
                 ctx.drawTextWithShadow(textRenderer, "Right Shift  •  ESC closes", panelX + 18, panelY + panelH - 16, theme.secondaryText());
@@ -176,6 +192,7 @@ public class ModuleManager {
                 if (mouseX >= panelX + 10 && mouseX < panelX + sideW - 10
                     && mouseY >= cy && mouseY < cy + 34) {
                     category = i;
+                    search = "";
                     return true;
                 }
                 cy += 38;
@@ -183,9 +200,6 @@ public class ModuleManager {
 
             int contentX = panelX + sideW + 18;
             int contentW = panelW - sideW - 36;
-            if (category == 2) {
-                return super.mouseClicked(mouseX, mouseY, button);
-            }
             int y = panelY + 52 + 38;
 
             for (Module module : manager.modules) {
@@ -199,24 +213,6 @@ public class ModuleManager {
                 }
                 y += 54;
                 if (y > panelY + panelH - 25) break;
-            }
-            int contentX = panelX + sideW + 18;
-            int contentW = panelW - sideW - 36;
-            if (category == 2) {
-                int startY = panelY + 62;
-                int cardW = Math.max(150, (contentW - 16) / 2);
-                Theme[] themes = Theme.values();
-                for (int i = 0; i < themes.length; i++) {
-                    int col = i % 2;
-                    int row = i / 2;
-                    int x = contentX + col * (cardW + 8);
-                    int y = startY + row * 82;
-                    if (mouseX >= x && mouseX < x + cardW && mouseY >= y && mouseY < y + 68) {
-                        theme = themes[i];
-                        return true;
-                    }
-                }
-                return true;
             }
             return super.mouseClicked(mouseX, mouseY, button);
         }
