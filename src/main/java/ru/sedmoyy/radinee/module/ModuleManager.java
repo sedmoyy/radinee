@@ -603,7 +603,7 @@ public class ModuleManager {
         private int timer;
 
         TapeMouseModule() {
-            super("TapeMouse", "Combat", "Automatic left clicks while the attack key is held");
+            super("TapeMouse", "Combat", "Repeats left-click actions every configured number of ticks");
         }
 
         @Override
@@ -618,13 +618,8 @@ public class ModuleManager {
 
         @Override
         public void onTick(MinecraftClient client) {
-            if (client.player == null || client.world == null || client.currentScreen != null
-                || client.interactionManager == null) {
-                timer = 0;
-                return;
-            }
-
-            if (!client.options.attackKey.isPressed()) {
+            if (client.player == null || client.world == null
+                || client.currentScreen != null || client.interactionManager == null) {
                 timer = 0;
                 return;
             }
@@ -634,6 +629,8 @@ public class ModuleManager {
                 return;
             }
 
+            // Simulate a left-click action regardless of whether the crosshair
+            // is currently over an entity or a block.
             if (client.crosshairTarget instanceof EntityHitResult hit) {
                 Entity entity = hit.getEntity();
                 if (entity != client.player) {
