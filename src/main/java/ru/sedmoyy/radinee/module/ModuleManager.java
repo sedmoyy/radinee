@@ -262,8 +262,6 @@ public class ModuleManager {
             if (client.options != null) client.options.getGamma().setValue(1.0);
         }
     }
-}
-
 
     private enum Theme {
         OCEAN("Ocean", 0xFF08141F, 0xFF0E2433, 0xFF102B3C, 0xFF16384B, 0xFF0C202F, 0xFF37BDEB, 0xFFD9F7FF, 0xFF87B7C8, 0xFF1B4559, 0xFF0A1118),
@@ -289,4 +287,5 @@ public class ModuleManager {
         int input() { return input | 0xFF000000; }
         int switchOff() { return switchOff | 0xFF000000; }
     }
+
 }
