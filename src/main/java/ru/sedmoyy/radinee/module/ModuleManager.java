@@ -24,6 +24,42 @@ public class ModuleManager {
     private final List<Module> modules = new ArrayList<>();
     private final KeyBinding freeLookKey;
 
+    public enum Theme {
+        OCEAN("Ocean", 0xFF101F29, 0xFF0E2A38, t.card, t.accent, 0xFF9CCBD9),
+        SNOW("White", 0xFFF4F4F4, t.accent, 0xFFE3E3E3, 0xFF202020, 0xFF666666),
+        LIGHT_BLACK("Light Black", 0xFF171717, 0xFF202020, 0xFF303030, 0xFFE8E8E8, 0xFFAAAAAA),
+        GLASS("Glass", 0xAA18202A, 0x992A3440, 0x884A5A6A, 0xFFE8F4FF, 0xFFB5C9D8),
+        RAINY("Rainy", 0xFF16212A, 0xFF1D2D38, 0xFF2A3D4A, 0xFF78A9C2, 0xFFA8BBC5),
+        BLACK_WHITE("Black White", 0xFF080808, 0xFF111111, 0xFF292929, 0xFFFFFFFF, 0xFFBDBDBD);
+
+        final String name;
+        final int panel, side, card, accent, muted;
+
+        Theme(String name, int panel, int side, int card, int accent, int muted) {
+            this.name = name;
+            this.panel = panel;
+            this.side = side;
+            this.card = card;
+            this.accent = accent;
+            this.muted = muted;
+        }
+
+        Theme next() {
+            Theme[] all = values();
+            return all[(ordinal() + 1) % all.length];
+        }
+    }
+
+    private Theme theme = Theme.OCEAN;
+
+    public Theme getTheme() {
+        return theme;
+    }
+
+    private void cycleTheme() {
+        theme = theme.next();
+    }
+
     public ModuleManager() {
         modules.add(new VisualModule("NameTags", "Visuals", "Enhanced entity name tags"));
         modules.add(new TargetEspModule());
@@ -126,13 +162,15 @@ public class ModuleManager {
         @Override
         public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
             renderBackground(ctx, mouseX, mouseY, delta);
-            ctx.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xF008141F);
-            ctx.fill(panelX, panelY, panelX + panelW, panelY + 2, 0xFF37BDEB);
+            Theme t = manager.theme;
+            ctx.fill(panelX, panelY, panelX + panelW, panelY + panelH, t.panel);
+            ctx.fill(panelX, panelY, panelX + panelW, panelY + 2, t.accent);
 
             int sideW = 150;
-            ctx.fill(panelX, panelY, panelX + sideW, panelY + panelH, 0xFF0E2433);
-            ctx.drawTextWithShadow(textRenderer, "RADINEE", panelX + 18, panelY + 18, 0xFFD9F7FF);
-            ctx.drawTextWithShadow(textRenderer, "VISUAL CLIENT", panelX + 18, panelY + 33, 0xFF87B7C8);
+            ctx.fill(panelX, panelY, panelX + sideW, panelY + panelH, t.side);
+            ctx.drawTextWithShadow(textRenderer, "RADINEE", panelX + 18, panelY + 18, t.accent);
+            ctx.drawTextWithShadow(textRenderer, "VISUAL CLIENT", panelX + 18, panelY + 33, t.muted);
+            ctx.drawTextWithShadow(textRenderer, "THEME: " + t.name + "  [CLICK]", panelX + panelW - 190, panelY + 20, t.muted);
 
             int cy = panelY + 65;
             for (int i = 0; i < categories.size(); i++) {
@@ -141,7 +179,7 @@ public class ModuleManager {
                     ctx.fill(panelX + 10, cy, panelX + sideW - 10, cy + 34, 0xFF16384B);
                 }
                 ctx.drawTextWithShadow(textRenderer, categories.get(i), panelX + 22, cy + 11,
-                    selected ? 0xFF37BDEB : 0xFF87B7C8);
+                    selected ? 0xFF37BDEB : t.muted);
                 cy += 38;
             }
 
@@ -152,7 +190,7 @@ public class ModuleManager {
                 contentX, panelY + 35, 0xFF87B7C8);
 
             int searchY = panelY + 52;
-            ctx.fill(contentX, searchY, contentX + contentW, searchY + 28, 0xFF1B4559);
+            ctx.fill(contentX, searchY, contentX + contentW, searchY + 28, t.card);
             ctx.drawTextWithShadow(textRenderer,
                 search.isEmpty() ? "Search modules..." : search,
                 contentX + 10, searchY + 9,
@@ -167,7 +205,7 @@ public class ModuleManager {
                 boolean hover = mouseX >= contentX && mouseX < contentX + contentW
                     && mouseY >= y && mouseY < y + 48;
                 ctx.fill(contentX, y, contentX + contentW, y + 48,
-                    hover ? 0xFF16384B : 0xFF102B3C);
+                    hover ? 0xFF16384B : t.card);
 
                 ctx.drawTextWithShadow(textRenderer, module.getName(), contentX + 12, y + 8,
                     module.isEnabled() ? 0xFF37BDEB : 0xFFFFFFFF);
@@ -234,6 +272,11 @@ public class ModuleManager {
                 if (mouseX >= contentX && mouseX < contentX + contentW
                     && mouseY >= y && mouseY < y + 48) {
                     if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+                        if (mouseY >= panelY + 10 && mouseY <= panelY + 34
+                            && mouseX >= panelX + panelW - 205) {
+                            manager.cycleTheme();
+                            return true;
+                        }
                         module.toggle(client);
                     } else if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
                         client.setScreen(new SettingsScreen(this, module));
@@ -269,9 +312,10 @@ public class ModuleManager {
             int x = (width - w) / 2;
             int y = (height - h) / 2;
 
-            ctx.fill(x, y, x + w, y + h, 0xEE101820);
+            Theme t = ((VisualsScreen) parent).manager.theme;
+            ctx.fill(x, y, x + w, y + h, t.panel);
             ctx.drawTextWithShadow(textRenderer, module.getName(), x + 20, y + 20, 0xFFFFFFFF);
-            ctx.drawTextWithShadow(textRenderer, module.getDescription(), x + 20, y + 40, 0xFF9DB5C4);
+            ctx.drawTextWithShadow(textRenderer, module.getDescription(), x + 20, y + 40, t.muted);
 
             int line = y + 72;
             if (module instanceof FullbrightModule fb) {
@@ -307,7 +351,7 @@ public class ModuleManager {
 
         private void drawSlider(DrawContext ctx, int x, int y, int w, String label, int value) {
             ctx.drawTextWithShadow(textRenderer, label + ": " + value + "%", x, y, 0xFFFFFFFF);
-            ctx.fill(x, y + 20, x + w, y + 26, 0xFF31434F);
+            ctx.fill(x, y + 20, x + w, y + 26, t.card);
             int knob = x + (w * value / 100);
             ctx.fill(knob - 3, y + 15, knob + 3, y + 31, 0xFF37BDEB);
         }
@@ -363,7 +407,8 @@ public class ModuleManager {
         }
 
         @Override
-        public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        public boolean keyPressed(KeyInput input) {
+            int keyCode = input.key();
             if (module instanceof FreeLookModule fl && fl.rebinding) {
                 if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                     fl.cancelRebind();
@@ -377,7 +422,7 @@ public class ModuleManager {
                 client.setScreen(parent);
                 return true;
             }
-            return super.keyPressed(keyCode, scanCode, modifiers);
+            return super.keyPressed(input);
         }
 
         private int clamp(int n) {
