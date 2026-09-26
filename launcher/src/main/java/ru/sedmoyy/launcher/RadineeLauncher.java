@@ -3,12 +3,11 @@ package ru.sedmoyy.launcher;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.io.File;
-import java.nio.file.Files;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.prefs.Preferences;
 
@@ -17,11 +16,14 @@ public final class RadineeLauncher {
     private static final Path ROOT = Path.of(System.getProperty("user.home"), ".radinee-client");
     private static final Path GAME = ROOT.resolve("game");
     private static final String MC_VERSION = "1.21.11";
-    private static final String FABRIC_INSTALLER = "https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.1.2/fabric-installer-1.1.2.jar";
-    private static final Preferences PREFS = Preferences.userRoot().node("ru.sedmoyy.radinee");
+    private static final String FABRIC_INSTALLER =
+            "https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.1.2/fabric-installer-1.1.2.jar";
+    private static final Preferences PREFS =
+            Preferences.userRoot().node("ru.sedmoyy.radinee");
 
     private final JTextField username = new JTextField(PREFS.get("username", ""));
-    private final JSpinner ram = new JSpinner(new SpinnerNumberModel(PREFS.getInt("ram", 4096), 2048, 16384, 512));
+    private final JSpinner ram =
+            new JSpinner(new SpinnerNumberModel(PREFS.getInt("ram", 4096), 2048, 16384, 512));
     private final JLabel status = new JLabel("Ready to launch.");
 
     public static void main(String[] args) {
@@ -29,7 +31,9 @@ public final class RadineeLauncher {
     }
 
     private void show() {
-        try { Files.createDirectories(GAME); } catch (Exception ignored) {}
+        try {
+            Files.createDirectories(GAME);
+        } catch (Exception ignored) {}
 
         JFrame frame = new JFrame(NAME);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -37,7 +41,7 @@ public final class RadineeLauncher {
         frame.setSize(980, 620);
         frame.setLocationRelativeTo(null);
 
-        JPanel root = new JPanel(new BorderLayout(0, 0));
+        JPanel root = new JPanel(new BorderLayout());
         root.setBackground(new Color(12, 14, 20));
 
         JPanel sidebar = new JPanel();
@@ -50,15 +54,18 @@ public final class RadineeLauncher {
         logo.setForeground(Color.WHITE);
         logo.setFont(new Font("SansSerif", Font.BOLD, 26));
         sidebar.add(logo);
+
         JLabel sub = new JLabel("CLIENT");
         sub.setForeground(new Color(120, 150, 255));
         sub.setFont(new Font("SansSerif", Font.BOLD, 12));
         sidebar.add(sub);
+
         sidebar.add(Box.createVerticalStrut(38));
         sidebar.add(sideButton("PLAY", true));
         sidebar.add(Box.createVerticalStrut(8));
         sidebar.add(sideButton("SETTINGS", false));
         sidebar.add(Box.createVerticalGlue());
+
         JLabel version = new JLabel("Radinee Client 0.1.0");
         version.setForeground(new Color(130, 135, 150));
         sidebar.add(version);
@@ -71,7 +78,9 @@ public final class RadineeLauncher {
         title.setForeground(Color.WHITE);
         title.setFont(new Font("SansSerif", Font.BOLD, 34));
 
-        JLabel description = new JLabel("<html>Dedicated client instance for your visual modules.<br>It uses its own game directory and does not touch your normal Minecraft setup.</html>");
+        JLabel description = new JLabel(
+                "<html>Dedicated client instance for your visual modules.<br>" +
+                "It uses its own game directory and does not touch your normal Minecraft setup.</html>");
         description.setForeground(new Color(175, 180, 195));
         description.setFont(new Font("SansSerif", Font.PLAIN, 14));
 
@@ -87,15 +96,13 @@ public final class RadineeLauncher {
         card.setBorder(new EmptyBorder(24, 24, 24, 24));
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
 
-        JLabel account = label("Minecraft username");
-        card.add(account);
+        card.add(label("Minecraft username"));
         card.add(Box.createVerticalStrut(7));
         username.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
         card.add(username);
         card.add(Box.createVerticalStrut(18));
 
-        JLabel memory = label("RAM (MB)");
-        card.add(memory);
+        card.add(label("RAM (MB)"));
         card.add(Box.createVerticalStrut(7));
         ram.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
         card.add(ram);
@@ -111,14 +118,15 @@ public final class RadineeLauncher {
         play.addActionListener(e -> launch());
         card.add(play);
         card.add(Box.createVerticalStrut(16));
+
         status.setForeground(new Color(150, 155, 170));
         card.add(status);
 
         content.add(top, BorderLayout.NORTH);
         content.add(card, BorderLayout.CENTER);
-
         root.add(sidebar, BorderLayout.WEST);
         root.add(content, BorderLayout.CENTER);
+
         frame.setContentPane(root);
         frame.setVisible(true);
     }
@@ -142,7 +150,15 @@ public final class RadineeLauncher {
         return l;
     }
 
-    private String javaBin() {\n        String exe = System.getProperty("os.name").toLowerCase().contains("win") ? "javaw.exe" : "java";\n        Path javaHome = Path.of(System.getProperty("java.home"), "bin", exe);\n        return Files.exists(javaHome) ? javaHome.toString() : exe;\n    }\n\n    private void launch() {
+    private String javaBin() {
+        String exe = System.getProperty("os.name").toLowerCase().contains("win")
+                ? "javaw.exe"
+                : "java";
+        Path javaHome = Path.of(System.getProperty("java.home"), "bin", exe);
+        return Files.exists(javaHome) ? javaHome.toString() : exe;
+    }
+
+    private void launch() {
         String name = username.getText().trim();
         if (name.isEmpty()) {
             status.setText("Enter your Minecraft username first.");
@@ -153,34 +169,45 @@ public final class RadineeLauncher {
         PREFS.putInt("ram", (Integer) ram.getValue());
 
         status.setText("Подготовка Radinee Client...");
+
         try {
             Files.createDirectories(GAME);
             Path installer = ROOT.resolve("fabric-installer.jar");
+
             if (!Files.exists(installer)) {
                 status.setText("Скачивание Fabric Installer...");
                 HttpClient http = HttpClient.newHttpClient();
-                HttpRequest request = HttpRequest.newBuilder(URI.create(FABRIC_INSTALLER)).build();
-                http.send(HttpRequest.newBuilder(URI.create(FABRIC_INSTALLER)).build(), HttpResponse.BodyHandlers.ofFile(installer));
+                http.send(
+                        HttpRequest.newBuilder(URI.create(FABRIC_INSTALLER)).build(),
+                        HttpResponse.BodyHandlers.ofFile(installer)
+                );
             }
+
             status.setText("Установка Fabric " + MC_VERSION + "...");
-            Process p = new ProcessBuilder(
-                javaBin(), "-jar", installer.toString(), "client",
-                "-mcversion", MC_VERSION, "-dir", GAME.toString(), "-noprofile"
+            Process process = new ProcessBuilder(
+                    javaBin(), "-jar", installer.toString(),
+                    "client", "-mcversion", MC_VERSION,
+                    "-dir", GAME.toString(), "-noprofile"
             ).redirectErrorStream(true).start();
-            int code = p.waitFor();
-            if (code != 0) throw new IllegalStateException("Fabric installer завершился с кодом " + code);
-            status.setText("Fabric " + MC_VERSION + " установлен. Готов к запуску.");
-            JOptionPane.showMessageDialog(null,
-                "Radinee Client подготовлен.\n\nMinecraft: " + MC_VERSION + "\nFabric установлен в:\n" + GAME,
-                NAME, JOptionPane.INFORMATION_MESSAGE);
+
+            int code = process.waitFor();
+            if (code != 0) {
+                throw new IllegalStateException(
+                        "Fabric installer завершился с кодом " + code);
+            }
+
+            status.setText("Fabric установлен. Требуется вход в Microsoft.");
+            JOptionPane.showMessageDialog(
+                    null,
+                    "Radinee Client подготовлен.\n\n" +
+                    "Minecraft: " + MC_VERSION + "\n" +
+                    "Папка игры:\n" + GAME + "\n\n" +
+                    "Следующий этап — авторизация Microsoft и запуск Java-клиента.",
+                    NAME,
+                    JOptionPane.INFORMATION_MESSAGE
+            );
         } catch (Exception ex) {
             status.setText("Ошибка: " + ex.getMessage());
         }
-        JOptionPane.showMessageDialog(
-            null,
-            "The launcher UI is ready, but the authenticated Minecraft runtime still needs to be bundled/configured.\n\nGame directory:\n" + GAME,
-            NAME,
-            JOptionPane.INFORMATION_MESSAGE
-        );
     }
 }
