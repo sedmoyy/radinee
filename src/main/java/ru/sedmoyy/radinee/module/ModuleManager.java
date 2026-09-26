@@ -13,6 +13,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.util.hit.BlockHitResult;
 import org.lwjgl.glfw.GLFW;
 import ru.sedmoyy.radinee.RadineeClient;
 
@@ -80,6 +81,7 @@ public class ModuleManager {
         modules.add(new VisualModule("CPS Counter", "HUD", "Clicks per second"));
         modules.add(new VisualModule("Keystrokes", "HUD", "Movement and mouse keys"));
         modules.add(new FreeLookModule());
+        modules.add(new TapeMouseModule());
 
         freeLookKey = RadineeClient.registerModuleKey("Free Look", InputUtil.UNKNOWN_KEY.getCode());
         get("Free Look").setKeyBinding(freeLookKey);
@@ -337,7 +339,13 @@ public class ModuleManager {
                     x + 20, line + 20, 0xFF9DB5C4);
             } else if (module instanceof NoHurtCamModule nh) {
                 drawSlider(ctx, x + 20, line, w - 40, "Shake reduction", nh.reduction);
-            } else if (module instanceof ArmorHudModule ah) {\n                drawSlider(ctx, x + 20, line + 50, w - 40, "HUD opacity", manager.hudOpacity);\n            } else if (module instanceof TargetEspModule te) {\n                drawSlider(ctx, x + 20, line + 50, w - 40, "HUD opacity", manager.hudOpacity);\n            } else if (module instanceof FreeLookModule fl) {
+            } else if (module instanceof TapeMouseModule tm) {
+                drawSlider(ctx, x + 20, line, w - 40, "Ticks between clicks", tm.ticks);
+            } else if (module instanceof ArmorHudModule ah) {
+                drawSlider(ctx, x + 20, line + 50, w - 40, "HUD opacity", manager.hudOpacity);
+            } else if (module instanceof TargetEspModule te) {
+                drawSlider(ctx, x + 20, line + 50, w - 40, "HUD opacity", manager.hudOpacity);
+            } else if (module instanceof FreeLookModule fl) {
                 String state = fl.rebinding ? "PRESS A KEY OR CLICK A MOUSE BUTTON" : fl.keyName();
                 ctx.drawTextWithShadow(textRenderer, "Hold key: " + state, x + 20, line, 0xFFFFFFFF);
                 ctx.drawTextWithShadow(textRenderer, "Right click this line to rebind",
@@ -381,7 +389,18 @@ public class ModuleManager {
                 }
             }
 
-            if ((module instanceof ArmorHudModule || module instanceof TargetEspModule) && my >= line + 62 && my <= line + 92) {\n                manager.setHudOpacity((int) (((mx - (x + 20)) / (double) (w - 40)) * 100));\n                return true;\n            }\n\n            if (module instanceof FullbrightModule fb && my >= line + 12 && my <= line + 40) {
+            if (module instanceof TapeMouseModule && my >= line + 12 && my <= line + 40) {
+                ((TapeMouseModule) module).ticks = Math.max(1, Math.min(20,
+                    (int) (((mx - (x + 20)) / (double) (w - 40)) * 20) + 1));
+                return true;
+            }
+
+            if ((module instanceof ArmorHudModule || module instanceof TargetEspModule) && my >= line + 62 && my <= line + 92) {
+                manager.setHudOpacity((int) (((mx - (x + 20)) / (double) (w - 40)) * 100));
+                return true;
+            }
+
+            if (module instanceof FullbrightModule fb && my >= line + 12 && my <= line + 40) {
                 fb.brightness = clamp((int) (((mx - (x + 20)) / (double) (w - 40)) * 100));
                 return true;
             }
@@ -576,6 +595,55 @@ public class ModuleManager {
 
         NoHurtCamModule() {
             super("No HurtCam", "Player", "Reduces camera shake by a configurable percentage");
+        }
+    }
+
+    private static class TapeMouseModule extends Module {
+        int ticks = 2;
+        private int timer;
+
+        TapeMouseModule() {
+            super("TapeMouse", "Combat", "Automatic left clicks while the attack key is held");
+        }
+
+        @Override
+        public void onEnable(MinecraftClient client) {
+            timer = 0;
+        }
+
+        @Override
+        public void onDisable(MinecraftClient client) {
+            timer = 0;
+        }
+
+        @Override
+        public void onTick(MinecraftClient client) {
+            if (client.player == null || client.world == null || client.currentScreen != null
+                || client.interactionManager == null) {
+                timer = 0;
+                return;
+            }
+
+            if (!client.options.attackKey.isPressed()) {
+                timer = 0;
+                return;
+            }
+
+            if (timer > 0) {
+                timer--;
+                return;
+            }
+
+            if (client.crosshairTarget instanceof EntityHitResult hit) {
+                Entity entity = hit.getEntity();
+                if (entity != client.player) {
+                    client.interactionManager.attackEntity(client.player, entity);
+                }
+            } else if (client.crosshairTarget instanceof BlockHitResult hit) {
+                client.interactionManager.attackBlock(hit.getBlockPos(), hit.getSide());
+            }
+
+            timer = Math.max(0, ticks - 1);
         }
     }
 
