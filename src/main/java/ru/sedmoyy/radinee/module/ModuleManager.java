@@ -55,7 +55,7 @@ public class ModuleManager {
         else if (client.currentScreen == null) client.setScreen(new VisualsScreen(this));
     }
 
-    public Module get(String name) {
+    public boolean isFreeLookActive() {\n        Module m = get("Free Look");\n        return m != null && m.getKeyBinding() != null && m.getKeyBinding().isPressed();\n    }\n\n    public Module get(String name) {
         for (Module m : modules) if (m.getName().equals(name)) return m;
         return null;
     }
