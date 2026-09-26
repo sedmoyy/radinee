@@ -15,28 +15,36 @@ public abstract class MouseMixin {
     @Shadow private double cursorDeltaX;
     @Shadow private double cursorDeltaY;
 
+    private float radinee$playerYaw;
+    private float radinee$playerPitch;
+
     @Inject(method = "updateMouse", at = @At("HEAD"))
     private void radinee$prepareFreeLook(double timeDelta, CallbackInfo ci) {
-        if (RadineeClient.isFreeLookActive()) {
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client.player != null && client.currentScreen == null) {
-                FreeLookState.begin(client);
-            }
-        } else if (FreeLookState.isActive()) {
-            FreeLookState.end();
+        if (!RadineeClient.isFreeLookActive()) {
+            if (FreeLookState.isActive()) FreeLookState.end();
+            return;
         }
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null || client.currentScreen != null) return;
+
+        radinee$playerYaw = client.player.getYaw();
+        radinee$playerPitch = client.player.getPitch();
+        FreeLookState.begin(client);
     }
 
     @Inject(method = "updateMouse", at = @At("TAIL"))
     private void radinee$captureFreeLook(double timeDelta, CallbackInfo ci) {
         if (!RadineeClient.isFreeLookActive()) return;
+
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || client.currentScreen != null) return;
 
         FreeLookState.update(cursorDeltaX, cursorDeltaY);
 
-        // Restore the player's normal look so Free Look never rotates the player.
-        client.player.setYaw(client.player.getYaw());
-        client.player.setPitch(client.player.getPitch());
+        // Vanilla mouse handling has already updated the player.
+        // Restore the player's rotation; CameraMixin uses FreeLookState for the view.
+        client.player.setYaw(radinee$playerYaw);
+        client.player.setPitch(radinee$playerPitch);
     }
 }
