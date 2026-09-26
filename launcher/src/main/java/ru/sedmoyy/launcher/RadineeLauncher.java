@@ -95,7 +95,7 @@ public final class RadineeLauncher {
         card.add(ram);
         card.add(Box.createVerticalStrut(22));
 
-        JButton play = new JButton("PLAY RADINEE");
+        JButton play = new JButton("Запустить");
         play.setAlignmentX(Component.LEFT_ALIGNMENT);
         play.setPreferredSize(new Dimension(220, 46));
         play.setMaximumSize(new Dimension(220, 46));
