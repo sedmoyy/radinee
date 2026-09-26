@@ -1,0 +1,20 @@
+plugins {
+    id 'application'
+}
+
+group = 'ru.sedmoyy'
+version = '0.1.0'
+
+repositories {
+    mavenCentral()
+}
+
+application {
+    mainClass = 'ru.sedmoyy.launcher.RadineeLauncher'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
