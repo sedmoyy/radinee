@@ -22,3 +22,14 @@ java {
         languageVersion = JavaLanguageVersion.of(21)
     }
 }
+
+tasks.named('jar') {
+    archiveClassifier = 'all'
+    manifest {
+        attributes('Main-Class': application.mainClass.get())
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
