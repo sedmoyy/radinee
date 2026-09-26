@@ -36,7 +36,7 @@ public class ModuleManager {
         modules.add(new VisualModule("Keystrokes", "HUD", "Movement and mouse keys"));
         modules.add(new FreeLookModule());
 
-        freeLookKey = RadineeClient.registerModuleKey("Free Look", GLFW.GLFW_KEY_V);
+        freeLookKey = RadineeClient.registerModuleKey("Free Look", InputUtil.UNKNOWN_KEY.getCode());
         modules.get(modules.size() - 1).setKeyBinding(freeLookKey);
     }
 
