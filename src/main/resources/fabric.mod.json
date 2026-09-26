@@ -6,6 +6,7 @@
   "description": "Visual-focused Fabric client for Minecraft 1.21.11.",
   "authors": ["sedmoyy"],
   "environment": "client",
+  "mixins": ["radinee.mixins.json"],
   "entrypoints": {"client": ["ru.sedmoyy.radinee.RadineeClient"]},
   "depends": {
     "fabricloader": ">=0.19.5",
