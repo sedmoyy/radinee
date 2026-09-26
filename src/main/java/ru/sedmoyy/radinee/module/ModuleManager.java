@@ -51,11 +51,11 @@ public class ModuleManager {
     }
 
     private Theme theme = Theme.OCEAN;
-    private int hudOpacity = 100;
+    private static int hudOpacity = 100;
 
     public int getHudOpacity() { return hudOpacity; }
     public void setHudOpacity(int value) { hudOpacity = Math.max(0, Math.min(100, value)); }
-    private int hudColor(int rgb) { return ((hudOpacity * 255 / 100) << 24) | (rgb & 0x00FFFFFF); }
+    private static int hudColor(int rgb) { return ((hudOpacity * 255 / 100) << 24) | (rgb & 0x00FFFFFF); }
 
     public Theme getTheme() {
         return theme;
@@ -500,9 +500,9 @@ public class ModuleManager {
 
             ctx.fill(x, y, x + 150, y + 42, hudColor(0x101820));
             ctx.drawTextWithShadow(client.textRenderer, living.getDisplayName(),
-                x + 8, y + 6, 0xFFFFFFFF);
+                x + 8, y + 6, hudColor(0xFFFFFF));
             ctx.drawTextWithShadow(client.textRenderer,
-                String.format("%.1f HP", health), x + 8, y + 20, 0xFF9DB5C4);
+                String.format("%.1f HP", health), x + 8, y + 20, hudColor(0x9DB5C4));
             ctx.fill(x + 8, y + 34, x + 8 + barWidth, y + 38, hudColor(0x3A3A3A));
             ctx.fill(x + 8, y + 34, x + 8 + filled, y + 38, hudColor(0x55FF55));
         }
@@ -543,7 +543,7 @@ public class ModuleManager {
 
                     if (mode == Mode.NUMBERS) {
                         ctx.drawTextWithShadow(client.textRenderer, String.valueOf(remaining),
-                            slotX, y + 18, color);
+                            slotX, y + 18, withAlpha(color));
                     } else if (mode == Mode.PERCENT) {
                         ctx.drawTextWithShadow(client.textRenderer,
                             String.format("%.0f%%", percent),
@@ -557,7 +557,11 @@ public class ModuleManager {
             }
         }
 
-        int withAlpha(int color) {\n            return ((hudOpacity * 255 / 100) << 24) | (color & 0x00FFFFFF);\n        }\n\n        static int colorFor(ItemStack stack) {
+        static int withAlpha(int color) {
+            return ((hudOpacity * 255 / 100) << 24) | (color & 0x00FFFFFF);
+        }
+
+        static int colorFor(ItemStack stack) {
             if (stack.isEmpty() || !stack.isDamageable()) return 0xFFFFFFFF;
 
             float p = (stack.getMaxDamage() - stack.getDamage()) / (float) stack.getMaxDamage();
