@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "radinee",
+  "version": "${version}",
+  "name": "Radinee Client",
+  "description": "Visual-focused Fabric client for Minecraft 1.21.11.",
+  "authors": ["sedmoyy"],
+  "environment": "client",
+  "entrypoints": {"client": ["ru.sedmoyy.radinee.RadineeClient"]},
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "fabric-api": ">=0.141.3+1.21.11",
+    "minecraft": "1.21.11",
+    "java": ">=21"
+  }
+}
