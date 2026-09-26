@@ -14,13 +14,21 @@ public class RadineeClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         MODULES = new ModuleManager();
-        KeyBinding menuKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-            "key.radinee.clickgui", InputUtil.Type.KEYSYM,
-            GLFW.GLFW_KEY_RIGHT_SHIFT, "category.radinee"
-        ));
+        KeyBinding menuKey = registerModuleKey("ClickGUI", GLFW.GLFW_KEY_RIGHT_SHIFT);
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (menuKey.wasPressed()) MODULES.toggleMenu(client);
             MODULES.tick(client);
         });
+    }
+
+    public static KeyBinding registerModuleKey(String name, int key) {
+        return KeyBindingHelper.registerKeyBinding(new KeyBinding(
+            "key.radinee." + name.toLowerCase().replace(" ", "_"),
+            InputUtil.Type.KEYSYM, key, "category.radinee"
+        ));
+    }
+
+    public static boolean isFreeLookActive() {
+        return MODULES != null && MODULES.isFreeLookActive();
     }
 }
