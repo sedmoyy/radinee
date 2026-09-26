@@ -1,12 +1,14 @@
 package ru.sedmoyy.radinee.module;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.option.KeyBinding;
 
 public abstract class Module {
     private final String name;
     private final String category;
     private final String description;
     private boolean enabled;
+    private KeyBinding keyBinding;
 
     protected Module(String name, String category, String description) {
         this.name = name;
@@ -22,6 +24,8 @@ public abstract class Module {
     public String getCategory() { return category; }
     public String getDescription() { return description; }
     public boolean isEnabled() { return enabled; }
+    public KeyBinding getKeyBinding() { return keyBinding; }
+    public void setKeyBinding(KeyBinding keyBinding) { this.keyBinding = keyBinding; }
 
     public void toggle(MinecraftClient client) {
         enabled = !enabled;
