@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "ru.sedmoyy.radinee.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "MouseMixin",
+    "CameraMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
