@@ -1,9 +1,11 @@
 package ru.sedmoyy.radinee.module;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
@@ -191,7 +193,8 @@ public class ModuleManager {
         }
 
         @Override
-        public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        public boolean keyPressed(KeyInput input) {
+            int keyCode = input.key();
             if (keyCode == GLFW.GLFW_KEY_BACKSPACE && !search.isEmpty()) {
                 search = search.substring(0, search.length() - 1);
                 return true;
@@ -200,11 +203,14 @@ public class ModuleManager {
                 client.setScreen(null);
                 return true;
             }
-            return super.keyPressed(keyCode, scanCode, modifiers);
+            return super.keyPressed(input);
         }
 
         @Override
-        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        public boolean mouseClicked(Click click, boolean doubled) {
+            double mouseX = click.x();
+            double mouseY = click.y();
+            int button = click.button();
             int sideW = 150;
             int cy = panelY + 65;
             for (int i = 0; i < categories.size(); i++) {
@@ -236,7 +242,7 @@ public class ModuleManager {
                 }
                 y += 54;
             }
-            return super.mouseClicked(mouseX, mouseY, button);
+            return super.mouseClicked(click, doubled);
         }
 
         @Override
@@ -307,7 +313,10 @@ public class ModuleManager {
         }
 
         @Override
-        public boolean mouseClicked(double mx, double my, int button) {
+        public boolean mouseClicked(Click click, boolean doubled) {
+            double mx = click.x();
+            double my = click.y();
+            int button = click.button();
             int w = Math.min(560, width - 40);
             int h = 300;
             int x = (width - w) / 2;
@@ -350,7 +359,7 @@ public class ModuleManager {
                 return true;
             }
 
-            return super.mouseClicked(mx, my, button);
+            return super.mouseClicked(click, doubled);
         }
 
         @Override
