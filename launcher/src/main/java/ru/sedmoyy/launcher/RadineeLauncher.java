@@ -146,7 +146,13 @@ public final class RadineeLauncher {
         PREFS.put("username", name);
         PREFS.putInt("ram", (Integer) ram.getValue());
 
-        status.setText("Launcher is ready. The dedicated client runtime is not bundled yet.");
+        status.setText("Подготовка Radinee Client...");
+        try {
+            Files.createDirectories(GAME);
+            status.setText("Отдельная папка клиента готова: " + GAME);
+        } catch (Exception ex) {
+            status.setText("Ошибка подготовки клиента: " + ex.getMessage());
+        }
         JOptionPane.showMessageDialog(
             null,
             "The launcher UI is ready, but the authenticated Minecraft runtime still needs to be bundled/configured.\n\nGame directory:\n" + GAME,
