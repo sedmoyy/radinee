@@ -5,6 +5,10 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.io.File;
 import java.nio.file.Files;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Path;
 import java.util.prefs.Preferences;
 
@@ -12,6 +16,8 @@ public final class RadineeLauncher {
     private static final String NAME = "Radinee Client";
     private static final Path ROOT = Path.of(System.getProperty("user.home"), ".radinee-client");
     private static final Path GAME = ROOT.resolve("game");
+    private static final String MC_VERSION = "1.21.11";
+    private static final String FABRIC_INSTALLER = "https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.1.2/fabric-installer-1.1.2.jar";
     private static final Preferences PREFS = Preferences.userRoot().node("ru.sedmoyy.radinee");
 
     private final JTextField username = new JTextField(PREFS.get("username", ""));
@@ -136,7 +142,7 @@ public final class RadineeLauncher {
         return l;
     }
 
-    private void launch() {
+    private String javaBin() {\n        String exe = System.getProperty("os.name").toLowerCase().contains("win") ? "javaw.exe" : "java";\n        Path javaHome = Path.of(System.getProperty("java.home"), "bin", exe);\n        return Files.exists(javaHome) ? javaHome.toString() : exe;\n    }\n\n    private void launch() {
         String name = username.getText().trim();
         if (name.isEmpty()) {
             status.setText("Enter your Minecraft username first.");
@@ -149,9 +155,26 @@ public final class RadineeLauncher {
         status.setText("Подготовка Radinee Client...");
         try {
             Files.createDirectories(GAME);
-            status.setText("Отдельная папка клиента готова: " + GAME);
+            Path installer = ROOT.resolve("fabric-installer.jar");
+            if (!Files.exists(installer)) {
+                status.setText("Скачивание Fabric Installer...");
+                HttpClient http = HttpClient.newHttpClient();
+                HttpRequest request = HttpRequest.newBuilder(URI.create(FABRIC_INSTALLER)).build();
+                http.send(HttpRequest.newBuilder(URI.create(FABRIC_INSTALLER)).build(), HttpResponse.BodyHandlers.ofFile(installer));
+            }
+            status.setText("Установка Fabric " + MC_VERSION + "...");
+            Process p = new ProcessBuilder(
+                javaBin(), "-jar", installer.toString(), "client",
+                "-mcversion", MC_VERSION, "-dir", GAME.toString(), "-noprofile"
+            ).redirectErrorStream(true).start();
+            int code = p.waitFor();
+            if (code != 0) throw new IllegalStateException("Fabric installer завершился с кодом " + code);
+            status.setText("Fabric " + MC_VERSION + " установлен. Готов к запуску.");
+            JOptionPane.showMessageDialog(null,
+                "Radinee Client подготовлен.\n\nMinecraft: " + MC_VERSION + "\nFabric установлен в:\n" + GAME,
+                NAME, JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception ex) {
-            status.setText("Ошибка подготовки клиента: " + ex.getMessage());
+            status.setText("Ошибка: " + ex.getMessage());
         }
         JOptionPane.showMessageDialog(
             null,
