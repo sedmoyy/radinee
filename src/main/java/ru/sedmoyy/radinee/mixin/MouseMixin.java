@@ -15,18 +15,28 @@ public abstract class MouseMixin {
     @Shadow private double cursorDeltaX;
     @Shadow private double cursorDeltaY;
 
-    @Inject(method = "updateMouse", at = @At("HEAD"), cancellable = true)
-    private void radinee$freeLook(double timeDelta, CallbackInfo ci) {
-        if (!RadineeClient.isFreeLookActive()) {
-            if (FreeLookState.isActive()) FreeLookState.end();
-            return;
+    @Inject(method = "updateMouse", at = @At("HEAD"))
+    private void radinee$prepareFreeLook(double timeDelta, CallbackInfo ci) {
+        if (RadineeClient.isFreeLookActive()) {
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player != null && client.currentScreen == null) {
+                FreeLookState.begin(client);
+            }
+        } else if (FreeLookState.isActive()) {
+            FreeLookState.end();
         }
+    }
+
+    @Inject(method = "updateMouse", at = @At("TAIL"))
+    private void radinee$captureFreeLook(double timeDelta, CallbackInfo ci) {
+        if (!RadineeClient.isFreeLookActive()) return;
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || client.currentScreen != null) return;
-        FreeLookState.begin(client);
+
         FreeLookState.update(cursorDeltaX, cursorDeltaY);
-        cursorDeltaX = 0.0;
-        cursorDeltaY = 0.0;
-        ci.cancel();
+
+        // Restore the player's normal look so Free Look never rotates the player.
+        client.player.setYaw(client.player.getYaw());
+        client.player.setPitch(client.player.getPitch());
     }
 }
