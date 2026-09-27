@@ -1,7 +1,7 @@
 package ru.sedmoyy.launcher;
 
 import net.raphimc.minecraftauth.MinecraftAuth;
-import net.raphimc.minecraftauth.java.JavaAuthManager;
+import net.aphimc.minecraftauth.java.JavaAuthManager;
 import net.raphimc.minecraftauth.msa.model.MsaDeviceCode;
 import net.raphimc.minecraftauth.msa.service.impl.DeviceCodeMsaAuthService;
 
@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 import java.util.prefs.Preferences;
+import java.io.IOException;
 
 public final class RadineeLauncher {
     private static final String NAME = "Radinee Client";
@@ -193,7 +194,7 @@ public final class RadineeLauncher {
         thread.start();
     }
 
-    private JavaAuthManager loginWithDeviceCode(HttpClient httpClient) {
+    private JavaAuthManager loginWithDeviceCode(HttpClient httpClient) throws IOException {
         Consumer<MsaDeviceCode> callback = code -> SwingUtilities.invokeLater(() -> {
             String url = code.getDirectVerificationUri();
             status.setText("Открой ссылку Microsoft для входа.");
