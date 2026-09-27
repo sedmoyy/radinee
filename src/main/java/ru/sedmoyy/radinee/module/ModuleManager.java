@@ -510,14 +510,16 @@ public class ModuleManager {
             if (!(entity instanceof LivingEntity living)) return;
             if (entity == client.player) return;
 
-            int x = 8;
-            int y = 8;
+            int hudWidth = 150;
+            int hudHeight = 42;
+            int x = (ctx.getScaledWindowWidth() - hudWidth) / 2;
+            int y = (client.getWindow().getScaledHeight() - hudHeight) / 2;
             float health = Math.max(0.0f, living.getHealth());
             float maxHealth = Math.max(1.0f, living.getMaxHealth());
             int barWidth = 120;
             int filled = Math.round(barWidth * Math.min(1.0f, health / maxHealth));
 
-            ctx.fill(x, y, x + 150, y + 42, hudColor(0x101820));
+            ctx.fill(x, y, x + hudWidth, y + hudHeight, hudColor(0x101820));
             ctx.drawTextWithShadow(client.textRenderer, living.getDisplayName(),
                 x + 8, y + 6, hudColor(0xFFFFFF));
             ctx.drawTextWithShadow(client.textRenderer,
