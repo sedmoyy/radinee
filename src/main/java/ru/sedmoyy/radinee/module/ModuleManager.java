@@ -190,7 +190,7 @@ public class ModuleManager {
         int color = hudColor(0xFFFFFF);
         int bg = hudColor(0x101820);
 
-        } else if ("Crosshair".equals(name)) {
+        if ("Crosshair".equals(name)) {
             VisualModule vm = module instanceof VisualModule v ? v : null;
             if (vm != null && !vm.optionA) return;
             int size = vm == null ? 7 : Math.max(2, Math.min(20, vm.valueA / 10));
