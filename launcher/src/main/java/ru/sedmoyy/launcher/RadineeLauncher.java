@@ -1,7 +1,7 @@
 package ru.sedmoyy.launcher;
 
 import net.raphimc.minecraftauth.MinecraftAuth;
-import net.aphimc.minecraftauth.java.JavaAuthManager;
+import net.raphimc.minecraftauth.java.JavaAuthManager;
 import net.raphimc.minecraftauth.msa.model.MsaDeviceCode;
 import net.raphimc.minecraftauth.msa.service.impl.DeviceCodeMsaAuthService;
 
