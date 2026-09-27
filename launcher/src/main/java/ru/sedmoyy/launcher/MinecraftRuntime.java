@@ -11,6 +11,7 @@ import java.net.http.*;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 final class MinecraftRuntime {
