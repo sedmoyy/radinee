@@ -23,7 +23,7 @@ jobs:
         with:
           gradle-version: '9.2.0'
       - name: Build
-        run: gradle build
+        run: gradle build --stacktrace
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
