@@ -14,6 +14,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.Hand;
 import org.lwjgl.glfw.GLFW;
 import ru.sedmoyy.radinee.RadineeClient;
 
@@ -601,7 +602,11 @@ public class ModuleManager {
             } else if (module instanceof NoHurtCamModule nh) {
                 drawSlider(ctx, x + 20, line, w - 40, "Shake reduction", nh.reduction);
             } else if (module instanceof TapeMouseModule tm) {
-                drawSlider(ctx, x + 20, line, w - 40, "Ticks between clicks", tm.ticks);
+                ctx.drawTextWithShadow(textRenderer, "Click: " + tm.mode.name(),
+                    x + 20, line, 0xFFFFFFFF);
+                ctx.drawTextWithShadow(textRenderer, "Click the line to switch LEFT / RIGHT",
+                    x + 20, line + 20, 0xFF9DB5C4);
+                drawSlider(ctx, x + 20, line + 50, w - 40, "Ticks between clicks", tm.ticks);
             } else if (module instanceof ArmorHudModule ah) {
                 drawSlider(ctx, x + 20, line + 50, w - 40, "HUD opacity", manager.hudOpacity);
             } else if (module instanceof TargetEspModule te) {
@@ -650,10 +655,17 @@ public class ModuleManager {
                 }
             }
 
-            if (module instanceof TapeMouseModule && my >= line + 12 && my <= line + 40) {
-                ((TapeMouseModule) module).ticks = Math.max(1, Math.min(20,
-                    (int) (((mx - (x + 20)) / (double) (w - 40)) * 20) + 1));
-                return true;
+            if (module instanceof TapeMouseModule) {
+                TapeMouseModule tm = (TapeMouseModule) module;
+                if (my >= line && my <= line + 42) {
+                    tm.mode = tm.mode.next();
+                    return true;
+                }
+                if (my >= line + 62 && my <= line + 92) {
+                    tm.ticks = Math.max(1, Math.min(20,
+                        (int) (((mx - (x + 20)) / (double) (w - 40)) * 20) + 1));
+                    return true;
+                }
             }
 
             if ((module instanceof ArmorHudModule || module instanceof TargetEspModule) && my >= line + 62 && my <= line + 92) {
@@ -897,11 +909,20 @@ public class ModuleManager {
     }
 
     private static class TapeMouseModule extends Module {
+        enum ClickMode {
+            LEFT, RIGHT;
+
+            ClickMode next() {
+                return values()[(ordinal() + 1) % values().length];
+            }
+        }
+
         int ticks = 2;
+        ClickMode mode = ClickMode.LEFT;
         private int timer;
 
         TapeMouseModule() {
-            super("TapeMouse", "Combat", "Repeats left-click actions every configured number of ticks");
+            super("TapeMouse", "Combat", "Repeats left/right click actions every configured number of ticks");
         }
 
         @Override
@@ -927,15 +948,26 @@ public class ModuleManager {
                 return;
             }
 
-            // Simulate a left-click action regardless of whether the crosshair
-            // is currently over an entity or a block.
-            if (client.crosshairTarget instanceof EntityHitResult hit) {
-                Entity entity = hit.getEntity();
-                if (entity != client.player) {
-                    client.interactionManager.attackEntity(client.player, entity);
+            if (mode == ClickMode.LEFT) {
+                if (client.crosshairTarget instanceof EntityHitResult hit) {
+                    Entity entity = hit.getEntity();
+                    if (entity != client.player) {
+                        client.interactionManager.attackEntity(client.player, entity);
+                    }
+                } else if (client.crosshairTarget instanceof BlockHitResult hit) {
+                    client.interactionManager.attackBlock(hit.getBlockPos(), hit.getSide());
                 }
-            } else if (client.crosshairTarget instanceof BlockHitResult hit) {
-                client.interactionManager.attackBlock(hit.getBlockPos(), hit.getSide());
+            } else {
+                if (client.crosshairTarget instanceof EntityHitResult hit) {
+                    Entity entity = hit.getEntity();
+                    if (entity != client.player) {
+                        client.interactionManager.interactEntity(client.player, entity, Hand.MAIN_HAND);
+                    }
+                } else if (client.crosshairTarget instanceof BlockHitResult hit) {
+                    client.interactionManager.interactBlock(client.player, Hand.MAIN_HAND, hit);
+                } else {
+                    client.interactionManager.interactItem(client.player, Hand.MAIN_HAND);
+                }
             }
 
             timer = Math.max(0, ticks - 1);
