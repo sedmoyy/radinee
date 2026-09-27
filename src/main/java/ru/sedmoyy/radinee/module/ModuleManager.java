@@ -20,6 +20,8 @@ import ru.sedmoyy.radinee.RadineeClient;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ModuleManager {
     private final List<Module> modules = new ArrayList<>();
@@ -55,6 +57,27 @@ public class ModuleManager {
     private static int hudOpacity = 100;
     private int targetHudX = -1, targetHudY = -1;
     private int armorHudX = 8, armorHudY = -1;
+    private final Map<String, int[]> hudPositions = new HashMap<>();
+
+    private void initHudPositions() {
+        hudPositions.put("Crosshair", new int[]{-1, -1});
+        hudPositions.put("FPS Counter", new int[]{8, 8});
+        hudPositions.put("CPS Counter", new int[]{8, 22});
+        hudPositions.put("Keystrokes", new int[]{8, 42});
+    }
+
+    public int[] getHudPosition(String name) {
+        return hudPositions.computeIfAbsent(name, k -> new int[]{8, 8});
+    }
+
+    public void setHudPosition(String name, int x, int y, int screenWidth, int screenHeight) {
+        int w = 100;
+        int h = name.equals("Keystrokes") ? 64 : 18;
+        if (name.equals("Crosshair")) { w = 16; h = 16; }
+        int[] pos = getHudPosition(name);
+        pos[0] = Math.max(0, Math.min(x, Math.max(0, screenWidth - w)));
+        pos[1] = Math.max(0, Math.min(y, Math.max(0, screenHeight - h)));
+    }
 
     public int getTargetHudX() { return targetHudX; }
     public int getTargetHudY() { return targetHudY; }
@@ -97,13 +120,14 @@ public class ModuleManager {
         modules.add(new NoHurtCamModule());
         modules.add(new VisualModule("Crosshair", "HUD", "Custom crosshair"));
         modules.add(new VisualModule("FPS Counter", "HUD", "FPS indicator"));
-        modules.add(new VisualModule("CPS Counter", "HUD", "Clicks per second"));
+        modules.add(new CpsCounterModule());
         modules.add(new VisualModule("Keystrokes", "HUD", "Movement and mouse keys"));
         modules.add(new FreeLookModule());
         modules.add(new TapeMouseModule());
 
         freeLookKey = RadineeClient.registerModuleKey("Free Look", InputUtil.UNKNOWN_KEY.getCode());
         get("Free Look").setKeyBinding(freeLookKey);
+        initHudPositions();
     }
 
     public List<Module> getModules() {
@@ -148,6 +172,58 @@ public class ModuleManager {
         if (target instanceof TargetEspModule te && target.isEnabled() && te.showTargetHud) {
             te.render(ctx, client);
         }
+
+        renderExtraHud(ctx, client, "Crosshair");
+        renderExtraHud(ctx, client, "FPS Counter");
+        renderExtraHud(ctx, client, "CPS Counter");
+        renderExtraHud(ctx, client, "Keystrokes");
+    }
+
+    private void renderExtraHud(DrawContext ctx, MinecraftClient client, String name) {
+        Module module = get(name);
+        if (module == null || !module.isEnabled()) return;
+
+        int[] pos = getHudPosition(name);
+        int x = pos[0];
+        int y = pos[1];
+        int color = hudColor(0xFFFFFF);
+        int bg = hudColor(0x101820);
+
+        if ("Crosshair".equals(name)) {
+            int cx = x < 0 ? ctx.getScaledWindowWidth() / 2 : x;
+            int cy = y < 0 ? ctx.getScaledWindowHeight() / 2 : y;
+            ctx.fill(cx - 1, cy - 7, cx + 1, cy + 7, color);
+            ctx.fill(cx - 7, cy - 1, cx + 7, cy + 1, color);
+        } else if ("FPS Counter".equals(name)) {
+            ctx.fill(x, y, x + 86, y + 18, bg);
+            ctx.drawTextWithShadow(client.textRenderer, "FPS: " + client.getCurrentFps(), x + 5, y + 5, color);
+        } else if ("CPS Counter".equals(name)) {
+            ctx.fill(x, y, x + 86, y + 18, bg);
+            ctx.drawTextWithShadow(client.textRenderer, "CPS: " + getCps(), x + 5, y + 5, color);
+        } else if ("Keystrokes".equals(name)) {
+            ctx.fill(x, y, x + 94, y + 64, bg);
+            int c = hudColor(0xFFFFFF);
+            drawKey(ctx, client, "W", x + 31, y, client.options.forwardKey.isPressed(), c);
+            drawKey(ctx, client, "A", x, y + 21, client.options.leftKey.isPressed(), c);
+            drawKey(ctx, client, "S", x + 31, y + 21, client.options.backKey.isPressed(), c);
+            drawKey(ctx, client, "D", x + 62, y + 21, client.options.rightKey.isPressed(), c);
+            drawKey(ctx, client, "LMB", x, y + 42, client.options.attackKey.isPressed(), c);
+            drawKey(ctx, client, "RMB", x + 48, y + 42, client.options.useKey.isPressed(), c);
+        }
+    }
+
+    private void drawKey(DrawContext ctx, MinecraftClient client, String text, int x, int y, boolean pressed, int color) {
+        int bg = hudColor(pressed ? 0x365A70 : 0x202830);
+        int width = text.length() > 1 ? 44 : 28;
+        ctx.fill(x, y, x + width, y + 18, bg);
+        int textWidth = client.textRenderer.getWidth(text);
+        ctx.drawTextWithShadow(client.textRenderer, text, x + (width - textWidth) / 2, y + 5, color);
+    }
+
+    private int getCps() {
+        Module module = get("CPS Counter");
+        if (module instanceof CpsCounterModule cps) return cps.getCps();
+        return 0;
     }
 
     public boolean isFreeLookActive() {
@@ -360,6 +436,43 @@ public class ModuleManager {
                 ctx.fill(x + 8, y + 34, x + 128, y + 38, hudColor(0x55FF55));
             }
 
+            String[] extraNames = {"Crosshair", "FPS Counter", "CPS Counter", "Keystrokes"};
+            for (String name : extraNames) {
+                Module extraModule = manager.get(name);
+                if (extraModule != null && extraModule.isEnabled()) {
+                    int[] p = manager.getHudPosition(name);
+                    int ex = p[0], ey = p[1];
+                    if ("Crosshair".equals(name) && ex < 0) {
+                        ex = (sw - 16) / 2;
+                        ey = (sh - 16) / 2;
+                    }
+                    int ew = "Keystrokes".equals(name) ? 94 : ("Crosshair".equals(name) ? 16 : 86);
+                    int eh = "Keystrokes".equals(name) ? 64 : 18;
+                    ctx.fill(ex, ey, ex + ew, ey + eh, hudColor(0x25303A));
+                    ctx.drawTextWithShadow(textRenderer, name, ex + 4, ey + 4, hudColor(0xFFFFFF));
+                }
+            }
+
+            String[] extraNames = {"Crosshair", "FPS Counter", "CPS Counter", "Keystrokes"};
+            for (String name : extraNames) {
+                Module extraModule = manager.get(name);
+                if (extraModule == null || !extraModule.isEnabled()) continue;
+                int[] p = manager.getHudPosition(name);
+                int ex = p[0], ey = p[1];
+                if ("Crosshair".equals(name) && ex < 0) {
+                    ex = (sw - 16) / 2;
+                    ey = (sh - 16) / 2;
+                }
+                int ew = "Keystrokes".equals(name) ? 94 : ("Crosshair".equals(name) ? 16 : 86);
+                int eh = "Keystrokes".equals(name) ? 64 : 18;
+                if (mx >= ex && mx <= ex + ew && my >= ey && my <= ey + eh) {
+                    dragging = name;
+                    offsetX = (int) mx - ex;
+                    offsetY = (int) my - ey;
+                    return true;
+                }
+            }
+
             Module armor = manager.get("Armor HUD");
             if (armor instanceof ArmorHudModule && armor.isEnabled()) {
                 int x = manager.getArmorHudX();
@@ -419,6 +532,8 @@ public class ModuleManager {
                 manager.setTargetHudPosition(x, y, sw, sh);
             } else if ("Armor HUD".equals(dragging)) {
                 manager.setArmorHudPosition(x, y, sw, sh);
+            } else {
+                manager.setHudPosition(dragging, x, y, sw, sh);
             }
             return true;
         }
@@ -608,6 +723,31 @@ public class ModuleManager {
     private static class VisualModule extends Module {
         VisualModule(String name, String category, String description) {
             super(name, category, description);
+        }
+    }
+
+    private static class CpsCounterModule extends Module {
+        private int cps;
+        private int lastClickTick = -100;
+        private int tickCounter;
+
+        CpsCounterModule() {
+            super("CPS Counter", "HUD", "Clicks per second");
+        }
+
+        @Override
+        public void onTick(MinecraftClient client) {
+            tickCounter++;
+            if (client.options.attackKey.isPressed() && tickCounter - lastClickTick > 2) {
+                lastClickTick = tickCounter;
+                cps = Math.min(20, cps + 1);
+            } else if (cps > 0 && tickCounter % 20 == 0) {
+                cps--;
+            }
+        }
+
+        int getCps() {
+            return cps;
         }
     }
 
