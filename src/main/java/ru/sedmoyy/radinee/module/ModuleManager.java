@@ -1085,6 +1085,11 @@ public class ModuleManager {
             super("Free Look", "Player", "Hold a key to rotate the camera independently of the player");
         }
 
+        @Override
+        public void onTick(MinecraftClient client) {
+            ru.sedmoyy.radinee.FreeLookState.configure(sensitivity, invertY);
+        }
+
         String keyName() {
             return getKeyBinding() == null
                 ? "NONE"
