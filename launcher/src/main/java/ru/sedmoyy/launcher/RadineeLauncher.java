@@ -194,7 +194,7 @@ public final class RadineeLauncher {
         thread.start();
     }
 
-    private JavaAuthManager loginWithDeviceCode(HttpClient httpClient) throws IOException {
+    private JavaAuthManager loginWithDeviceCode(HttpClient httpClient) throws IOException, InterruptedException {
         Consumer<MsaDeviceCode> callback = code -> SwingUtilities.invokeLater(() -> {
             String url = code.getDirectVerificationUri();
             status.setText("Открой ссылку Microsoft для входа.");
