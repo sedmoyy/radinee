@@ -53,6 +53,23 @@ public class ModuleManager {
 
     private Theme theme = Theme.OCEAN;
     private static int hudOpacity = 100;
+    private int targetHudX = -1, targetHudY = -1;
+    private int armorHudX = 8, armorHudY = -1;
+
+    public int getTargetHudX() { return targetHudX; }
+    public int getTargetHudY() { return targetHudY; }
+    public int getArmorHudX() { return armorHudX; }
+    public int getArmorHudY() { return armorHudY; }
+
+    public void setTargetHudPosition(int x, int y, int screenWidth, int screenHeight) {
+        targetHudX = Math.max(0, Math.min(x, Math.max(0, screenWidth - 150)));
+        targetHudY = Math.max(0, Math.min(y, Math.max(0, screenHeight - 42)));
+    }
+
+    public void setArmorHudPosition(int x, int y, int screenWidth, int screenHeight) {
+        armorHudX = Math.max(0, Math.min(x, Math.max(0, screenWidth - 152)));
+        armorHudY = Math.max(0, Math.min(y, Math.max(0, screenHeight - 42)));
+    }
 
     public int getHudOpacity() { return hudOpacity; }
     public void setHudOpacity(int value) { hudOpacity = Math.max(0, Math.min(100, value)); }
@@ -69,7 +86,9 @@ public class ModuleManager {
     public ModuleManager() {
         modules.add(new VisualModule("NameTags", "Visuals", "Enhanced entity name tags"));
         modules.add(new TargetEspModule());
+        ((TargetEspModule) get("Target ESP")).setManager(this);
         modules.add(new ArmorHudModule());
+        ((ArmorHudModule) get("Armor HUD")).setManager(this);
         modules.add(new VisualModule("China Hat", "Visuals", "Cosmetic player hat"));
         modules.add(new VisualModule("Hit Color", "Visuals", "Custom damage tint"));
         modules.add(new VisualModule("Block Outline", "Visuals", "Custom block selection outline"));
@@ -109,7 +128,7 @@ public class ModuleManager {
     }
 
     public void toggleMenu(MinecraftClient client) {
-        if (client.currentScreen instanceof VisualsScreen) {
+        if (client.currentScreen instanceof VisualsScreen || client.currentScreen instanceof HudEditorScreen) {
             client.setScreen(null);
         } else if (client.currentScreen == null) {
             client.setScreen(new VisualsScreen(this));
@@ -178,6 +197,7 @@ public class ModuleManager {
             ctx.drawTextWithShadow(textRenderer, "RADINEE", panelX + 18, panelY + 18, t.accent);
             ctx.drawTextWithShadow(textRenderer, "VISUAL CLIENT", panelX + 18, panelY + 33, t.muted);
             ctx.drawTextWithShadow(textRenderer, "THEME: " + t.name + "  [CLICK]", panelX + panelW - 190, panelY + 20, t.muted);
+            ctx.drawTextWithShadow(textRenderer, "EDIT HUD", panelX + panelW - 92, panelY + 38, t.accent);
 
             int cy = panelY + 65;
             for (int i = 0; i < categories.size(); i++) {
@@ -256,6 +276,14 @@ public class ModuleManager {
             double mouseX = click.x();
             double mouseY = click.y();
             int button = click.button();
+
+            if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT
+                && mouseX >= panelX + panelW - 105 && mouseX < panelX + panelW - 10
+                && mouseY >= panelY + 28 && mouseY < panelY + 52) {
+                client.setScreen(new HudEditorScreen(this, manager));
+                return true;
+            }
+
             int sideW = 150;
             int cy = panelY + 65;
             for (int i = 0; i < categories.size(); i++) {
@@ -293,6 +321,124 @@ public class ModuleManager {
                 y += 54;
             }
             return super.mouseClicked(click, doubled);
+        }
+
+        @Override
+        public boolean shouldPause() {
+            return false;
+        }
+    }
+
+    private static class HudEditorScreen extends Screen {
+        private final Screen parent;
+        private final ModuleManager manager;
+        private String dragging;
+        private int offsetX, offsetY;
+
+        HudEditorScreen(Screen parent, ModuleManager manager) {
+            super(Text.literal("Radinee HUD Editor"));
+            this.parent = parent;
+            this.manager = manager;
+        }
+
+        @Override
+        public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+            renderBackground(ctx, mouseX, mouseY, delta);
+            int sw = ctx.getScaledWindowWidth();
+            int sh = client.getWindow().getScaledHeight();
+
+            ctx.drawTextWithShadow(textRenderer, "HUD EDITOR", 8, 8, 0xFFFFFFFF);
+            ctx.drawTextWithShadow(textRenderer, "Drag enabled HUD modules with LMB", 8, 22, 0xFF9DB5C4);
+
+            Module target = manager.get("Target ESP");
+            if (target instanceof TargetEspModule te && target.isEnabled() && te.showTargetHud) {
+                int x = manager.getTargetHudX() < 0 ? (sw - 150) / 2 : manager.getTargetHudX();
+                int y = manager.getTargetHudY() < 0 ? (sh - 42) / 2 : manager.getTargetHudY();
+                ctx.fill(x, y, x + 150, y + 42, hudColor(0x101820));
+                ctx.drawTextWithShadow(textRenderer, "Target ESP", x + 8, y + 6, hudColor(0xFFFFFF));
+                ctx.drawTextWithShadow(textRenderer, "DRAG", x + 8, y + 20, hudColor(0x9DB5C4));
+                ctx.fill(x + 8, y + 34, x + 128, y + 38, hudColor(0x55FF55));
+            }
+
+            Module armor = manager.get("Armor HUD");
+            if (armor instanceof ArmorHudModule && armor.isEnabled()) {
+                int x = manager.getArmorHudX();
+                int y = manager.getArmorHudY() < 0 ? sh - 42 : manager.getArmorHudY();
+                ctx.fill(x, y, x + 152, y + 42, hudColor(0x101820));
+                ctx.drawTextWithShadow(textRenderer, "Armor HUD", x + 8, y + 6, hudColor(0xFFFFFF));
+                ctx.drawTextWithShadow(textRenderer, "DRAG", x + 8, y + 20, hudColor(0x9DB5C4));
+            }
+
+            ctx.drawTextWithShadow(textRenderer, "ESC = back", 8, sh - 16, 0xFF9DB5C4);
+            super.render(ctx, mouseX, mouseY, delta);
+        }
+
+        @Override
+        public boolean mouseClicked(Click click, boolean doubled) {
+            if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return super.mouseClicked(click, doubled);
+
+            double mx = click.x();
+            double my = click.y();
+            int sw = client.getWindow().getScaledWidth();
+            int sh = client.getWindow().getScaledHeight();
+
+            Module target = manager.get("Target ESP");
+            int targetX = manager.getTargetHudX() < 0 ? (sw - 150) / 2 : manager.getTargetHudX();
+            int targetY = manager.getTargetHudY() < 0 ? (sh - 42) / 2 : manager.getTargetHudY();
+            if (target != null && target.isEnabled() && mx >= targetX && mx <= targetX + 150
+                && my >= targetY && my <= targetY + 42) {
+                dragging = "Target ESP";
+                offsetX = (int) mx - targetX;
+                offsetY = (int) my - targetY;
+                return true;
+            }
+
+            Module armor = manager.get("Armor HUD");
+            int armorX = manager.getArmorHudX();
+            int armorY = manager.getArmorHudY() < 0 ? sh - 42 : manager.getArmorHudY();
+            if (armor != null && armor.isEnabled() && mx >= armorX && mx <= armorX + 152
+                && my >= armorY && my <= armorY + 42) {
+                dragging = "Armor HUD";
+                offsetX = (int) mx - armorX;
+                offsetY = (int) my - armorY;
+                return true;
+            }
+            return true;
+        }
+
+        @Override
+        public boolean mouseDragged(Click click, double offsetX, double offsetY) {
+            if (dragging == null || click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+
+            int x = (int) click.x() - this.offsetX;
+            int y = (int) click.y() - this.offsetY;
+            int sw = client.getWindow().getScaledWidth();
+            int sh = client.getWindow().getScaledHeight();
+
+            if ("Target ESP".equals(dragging)) {
+                manager.setTargetHudPosition(x, y, sw, sh);
+            } else if ("Armor HUD".equals(dragging)) {
+                manager.setArmorHudPosition(x, y, sw, sh);
+            }
+            return true;
+        }
+
+        @Override
+        public boolean mouseReleased(Click click) {
+            if (click.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+                dragging = null;
+                return true;
+            }
+            return super.mouseReleased(click);
+        }
+
+        @Override
+        public boolean keyPressed(KeyInput input) {
+            if (input.key() == GLFW.GLFW_KEY_ESCAPE) {
+                client.setScreen(parent);
+                return true;
+            }
+            return super.keyPressed(input);
         }
 
         @Override
@@ -498,6 +644,11 @@ public class ModuleManager {
 
     private static class TargetEspModule extends Module {
         boolean showTargetHud = true;
+        private ModuleManager manager;
+
+        void setManager(ModuleManager manager) {
+            this.manager = manager;
+        }
 
         TargetEspModule() {
             super("Target ESP", "Combat", "Target HUD with nickname and health bar");
@@ -512,8 +663,8 @@ public class ModuleManager {
 
             int hudWidth = 150;
             int hudHeight = 42;
-            int x = (ctx.getScaledWindowWidth() - hudWidth) / 2;
-            int y = (client.getWindow().getScaledHeight() - hudHeight) / 2;
+            int x = manager.getTargetHudX() < 0 ? (ctx.getScaledWindowWidth() - hudWidth) / 2 : manager.getTargetHudX();
+            int y = manager.getTargetHudY() < 0 ? (client.getWindow().getScaledHeight() - hudHeight) / 2 : manager.getTargetHudY();
             float health = Math.max(0.0f, living.getHealth());
             float maxHealth = Math.max(1.0f, living.getMaxHealth());
             int barWidth = 120;
@@ -530,6 +681,7 @@ public class ModuleManager {
     }
 
     private static class ArmorHudModule extends Module {
+        private ModuleManager manager;
         enum Mode {
             NUMBERS, BAR, PERCENT;
 
@@ -544,9 +696,13 @@ public class ModuleManager {
             super("Armor HUD", "HUD", "Armor durability with color-coded values");
         }
 
+        void setManager(ModuleManager manager) {
+            this.manager = manager;
+        }
+
         void render(DrawContext ctx, MinecraftClient client) {
-            int x = 8;
-            int y = client.getWindow().getScaledHeight() - 42;
+            int x = manager.getArmorHudX();
+            int y = manager.getArmorHudY() < 0 ? client.getWindow().getScaledHeight() - 42 : manager.getArmorHudY();
 
             for (int i = 0; i < 4; i++) {
                 ItemStack stack = client.player.getInventory().getArmorStack(i);
