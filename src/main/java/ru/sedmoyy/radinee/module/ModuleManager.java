@@ -576,62 +576,116 @@ public class ModuleManager {
         @Override
         public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
             renderBackground(ctx, mouseX, mouseY, delta);
-            int w = Math.min(560, width - 40);
-            int h = 300;
+            int w = Math.min(600, width - 40);
+            int h = 390;
             int x = (width - w) / 2;
             int y = (height - h) / 2;
-
             Theme t = ((VisualsScreen) parent).manager.theme;
-            ctx.fill(x, y, x + w, y + h, t.panel);
-            ctx.drawTextWithShadow(textRenderer, module.getName(), x + 20, y + 20, 0xFFFFFFFF);
-            ctx.drawTextWithShadow(textRenderer, module.getDescription(), x + 20, y + 40, t.muted);
 
-            int line = y + 72;
-            if (module instanceof FullbrightModule fb) {
-                drawSlider(ctx, x + 20, line, w - 40, "Brightness", fb.brightness);
-            } else if (module instanceof TargetEspModule te) {
-                ctx.drawTextWithShadow(textRenderer, "Target HUD: " + (te.showTargetHud ? "ON" : "OFF"),
-                    x + 20, line, 0xFFFFFFFF);
-                ctx.drawTextWithShadow(textRenderer, "Shows target nickname and health bar",
-                    x + 20, line + 20, 0xFF9DB5C4);
-            } else if (module instanceof ArmorHudModule ah) {
-                ctx.drawTextWithShadow(textRenderer, "Display: " + ah.mode,
-                    x + 20, line, 0xFFFFFFFF);
-                ctx.drawTextWithShadow(textRenderer, "Click to cycle: NUMBERS / BAR / PERCENT",
-                    x + 20, line + 20, 0xFF9DB5C4);
-            } else if (module instanceof NoHurtCamModule nh) {
-                drawSlider(ctx, x + 20, line, w - 40, "Shake reduction", nh.reduction);
-            } else if (module instanceof TapeMouseModule tm) {
-                ctx.drawTextWithShadow(textRenderer, "Click: " + tm.mode.name(),
-                    x + 20, line, 0xFFFFFFFF);
-                ctx.drawTextWithShadow(textRenderer, "Click the line to switch LEFT / RIGHT",
-                    x + 20, line + 20, 0xFF9DB5C4);
-                drawSlider(ctx, x + 20, line + 50, w - 40, "Ticks between clicks", tm.ticks);
-            } else if (module instanceof ArmorHudModule ah) {
-                drawSlider(ctx, x + 20, line + 50, w - 40, "HUD opacity", manager.hudOpacity);
-            } else if (module instanceof TargetEspModule te) {
-                drawSlider(ctx, x + 20, line + 50, w - 40, "HUD opacity", manager.hudOpacity);
-            } else if (module instanceof FreeLookModule fl) {
-                String state = fl.rebinding ? "PRESS A KEY OR CLICK A MOUSE BUTTON" : fl.keyName();
-                ctx.drawTextWithShadow(textRenderer, "Hold key: " + state, x + 20, line, 0xFFFFFFFF);
-                ctx.drawTextWithShadow(textRenderer, "Right click this line to rebind",
-                    x + 20, line + 20, 0xFF9DB5C4);
-            }
+            ctx.fill(x, y, x + w, y + h, t.panel);
+            ctx.fill(x, y, x + w, y + 2, t.accent);
+            ctx.drawTextWithShadow(textRenderer, module.getName(), x + 20, y + 18, 0xFFFFFFFF);
+            ctx.drawTextWithShadow(textRenderer, "Module settings", x + 20, y + 35, t.muted);
+
+            int line = y + 62;
+            renderModuleSettings(ctx, x + 20, line, w - 40, t);
 
             String bind = module.getKeyBinding() == null
                 ? "NONE"
                 : module.getKeyBinding().getBoundKeyLocalizedText().getString();
-            ctx.drawTextWithShadow(textRenderer, "Keybind: " + bind,
-                x + 20, y + h - 50, 0xFFD9F7FF);
-            ctx.drawTextWithShadow(textRenderer, "ESC = back", x + w - 90, y + h - 25, 0xFF87B7C8);
-
+            ctx.drawTextWithShadow(textRenderer, "Keybind: " + bind, x + 20, y + h - 42, 0xFFD9F7FF);
+            ctx.drawTextWithShadow(textRenderer, "ESC = back", x + w - 90, y + h - 22, 0xFF87B7C8);
             super.render(ctx, mouseX, mouseY, delta);
         }
 
-        private void drawSlider(DrawContext ctx, int x, int y, int w, String label, int value) {
-            ctx.drawTextWithShadow(textRenderer, label + ": " + value + "%", x, y, 0xFFFFFFFF);
-            ctx.fill(x, y + 20, x + w, y + 26, t.card);
-            int knob = x + (w * value / 100);
+        private void renderModuleSettings(DrawContext ctx, int x, int line, int w, Theme t) {
+            if (module instanceof VisualModule vm) {
+                switch (module.getName()) {
+                    case "NameTags" -> {
+                        toggleRow(ctx, x, line, "Show health", vm.optionA);
+                        toggleRow(ctx, x, line + 42, "Show distance", vm.optionB);
+                        slider(ctx, x, line + 88, w, "Scale", vm.valueA);
+                    }
+                    case "China Hat" -> {
+                        toggleRow(ctx, x, line, "Follow head rotation", vm.optionA);
+                        toggleRow(ctx, x, line + 42, "Show in first person", vm.optionB);
+                        slider(ctx, x, line + 88, w, "Hat size", vm.valueA);
+                        slider(ctx, x, line + 134, w, "Hat opacity", vm.valueB);
+                    }
+                    case "Hit Color" -> {
+                        toggleRow(ctx, x, line, "Enable damage tint", vm.optionA);
+                        slider(ctx, x, line + 46, w, "Intensity", vm.valueA);
+                        slider(ctx, x, line + 92, w, "Duration", vm.valueB);
+                    }
+                    case "Block Outline" -> {
+                        toggleRow(ctx, x, line, "Show outline", vm.optionA);
+                        slider(ctx, x, line + 46, w, "Thickness", vm.valueA);
+                        slider(ctx, x, line + 92, w, "Opacity", vm.valueB);
+                    }
+                    case "Player Model" -> {
+                        toggleRow(ctx, x, line, "Show model changes", vm.optionA);
+                        toggleRow(ctx, x, line + 42, "Rotate with camera", vm.optionB);
+                        slider(ctx, x, line + 88, w, "Model scale", vm.valueA);
+                    }
+                    case "Crosshair" -> {
+                        toggleRow(ctx, x, line, "Custom crosshair", vm.optionA);
+                        slider(ctx, x, line + 46, w, "Size", vm.valueA);
+                        slider(ctx, x, line + 92, w, "Gap", vm.valueB);
+                    }
+                    case "FPS Counter" -> {
+                        toggleRow(ctx, x, line, "Show FPS label", vm.optionA);
+                        toggleRow(ctx, x, line + 42, "Show background", vm.optionB);
+                        slider(ctx, x, line + 88, w, "Update rate", vm.valueA);
+                    }
+                    case "Keystrokes" -> {
+                        toggleRow(ctx, x, line, "Show mouse buttons", vm.optionA);
+                        toggleRow(ctx, x, line + 42, "Show WASD", vm.optionB);
+                        slider(ctx, x, line + 88, w, "Scale", vm.valueA);
+                    }
+                }
+                return;
+            }
+
+            if (module instanceof TargetEspModule te) {
+                toggleRow(ctx, x, line, "Target HUD", te.showTargetHud);
+                toggleRow(ctx, x, line + 42, "Health bar", te.showHealthBar);
+                slider(ctx, x, line + 88, w, "HUD opacity", manager().hudOpacity);
+            } else if (module instanceof ArmorHudModule ah) {
+                toggleRow(ctx, x, line, "Armor HUD", ah.showArmor);
+                ctx.drawTextWithShadow(textRenderer, "Display: " + ah.mode + "  [CLICK]", x, line + 44, 0xFFFFFFFF);
+                slider(ctx, x, line + 82, w, "HUD opacity", manager().hudOpacity);
+            } else if (module instanceof FullbrightModule fb) {
+                slider(ctx, x, line, w, "Brightness", fb.brightness);
+            } else if (module instanceof NoHurtCamModule nh) {
+                slider(ctx, x, line, w, "Shake reduction", nh.reduction);
+            } else if (module instanceof TapeMouseModule tm) {
+                ctx.drawTextWithShadow(textRenderer, "Click mode: " + tm.mode + "  [CLICK]", x, line, 0xFFFFFFFF);
+                slider(ctx, x, line + 42, w, "Ticks between clicks", tm.ticks * 5);
+            } else if (module instanceof CpsCounterModule cps) {
+                toggleRow(ctx, x, line, "Count while key is held", cps.countHeld);
+                slider(ctx, x, line + 46, w, "Max CPS", cps.maxCps * 5);
+            } else if (module instanceof FreeLookModule fl) {
+                slider(ctx, x, line, w, "Camera sensitivity", fl.sensitivity * 10);
+                toggleRow(ctx, x, line + 46, "Invert Y", fl.invertY);
+                ctx.drawTextWithShadow(textRenderer, "Hold key: " + fl.keyName(), x, line + 92, 0xFFD9F7FF);
+                ctx.drawTextWithShadow(textRenderer, "Right click the line below to rebind", x, line + 112, 0xFF87B7C8);
+            }
+        }
+
+        private ModuleManager manager() {
+            if (parent instanceof VisualsScreen vs) return vs.manager;
+            return RadineeClient.MODULES;
+        }
+
+        private void toggleRow(DrawContext ctx, int x, int y, String label, boolean value) {
+            ctx.drawTextWithShadow(textRenderer, label + ": " + (value ? "ON" : "OFF") + "  [CLICK]", x, y, 0xFFFFFFFF);
+        }
+
+        private void slider(DrawContext ctx, int x, int y, int w, String label, int value) {
+            int v = Math.max(0, Math.min(100, value));
+            ctx.drawTextWithShadow(textRenderer, label + ": " + v + "%", x, y, 0xFFFFFFFF);
+            ctx.fill(x, y + 20, x + w, y + 26, 0xFF303840);
+            int knob = x + (w * v / 100);
             ctx.fill(knob - 3, y + 15, knob + 3, y + 31, 0xFF37BDEB);
         }
 
@@ -640,62 +694,76 @@ public class ModuleManager {
             double mx = click.x();
             double my = click.y();
             int button = click.button();
-            int w = Math.min(560, width - 40);
-            int h = 300;
+            int w = Math.min(600, width - 40);
+            int h = 390;
             int x = (width - w) / 2;
             int y = (height - h) / 2;
-            int line = y + 72;
+            int line = y + 62;
+            int contentW = w - 40;
 
-            if (module instanceof FreeLookModule fl && fl.rebinding) {
-                if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT
-                    || button == GLFW.GLFW_MOUSE_BUTTON_RIGHT
-                    || button >= GLFW.GLFW_MOUSE_BUTTON_MIDDLE) {
-                    fl.setBinding(InputUtil.Type.MOUSE.createFromCode(button));
-                    return true;
+            if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+                if (module instanceof VisualModule vm) {
+                    switch (module.getName()) {
+                        case "NameTags" -> {
+                            if (my >= line && my <= line + 30) vm.optionA = !vm.optionA;
+                            else if (my >= line + 42 && my <= line + 72) vm.optionB = !vm.optionB;
+                            else if (my >= line + 82 && my <= line + 120) vm.valueA = sliderValue(mx, x + 20, contentW);
+                        }
+                        case "China Hat" -> {
+                            if (my >= line && my <= line + 30) vm.optionA = !vm.optionA;
+                            else if (my >= line + 42 && my <= line + 72) vm.optionB = !vm.optionB;
+                            else if (my >= line + 82 && my <= line + 120) vm.valueA = sliderValue(mx, x + 20, contentW);
+                            else if (my >= line + 128 && my <= line + 166) vm.valueB = sliderValue(mx, x + 20, contentW);
+                        }
+                        case "Hit Color", "Block Outline" -> {
+                            if (my >= line && my <= line + 30) vm.optionA = !vm.optionA;
+                            else if (my >= line + 40 && my <= line + 78) vm.valueA = sliderValue(mx, x + 20, contentW);
+                            else if (my >= line + 86 && my <= line + 124) vm.valueB = sliderValue(mx, x + 20, contentW);
+                        }
+                        case "Player Model" -> {
+                            if (my >= line && my <= line + 30) vm.optionA = !vm.optionA;
+                            else if (my >= line + 42 && my <= line + 72) vm.optionB = !vm.optionB;
+                            else if (my >= line + 82 && my <= line + 120) vm.valueA = sliderValue(mx, x + 20, contentW);
+                        }
+                        case "Crosshair" -> {
+                            if (my >= line && my <= line + 30) vm.optionA = !vm.optionA;
+                            else if (my >= line + 40 && my <= line + 78) vm.valueA = sliderValue(mx, x + 20, contentW);
+                            else if (my >= line + 86 && my <= line + 124) vm.valueB = sliderValue(mx, x + 20, contentW);
+                        }
+                        case "FPS Counter", "Keystrokes" -> {
+                            if (my >= line && my <= line + 30) vm.optionA = !vm.optionA;
+                            else if (my >= line + 42 && my <= line + 72) vm.optionB = !vm.optionB;
+                            else if (my >= line + 82 && my <= line + 120) vm.valueA = sliderValue(mx, x + 20, contentW);
+                        }
+                    }
+                } else if (module instanceof TargetEspModule te) {
+                    if (my >= line && my <= line + 30) te.showTargetHud = !te.showTargetHud;
+                    else if (my >= line + 42 && my <= line + 72) te.showHealthBar = !te.showHealthBar;
+                    else if (my >= line + 82 && my <= line + 120) manager().setHudOpacity(sliderValue(mx, x + 20, contentW));
+                } else if (module instanceof ArmorHudModule ah) {
+                    if (my >= line && my <= line + 30) ah.showArmor = !ah.showArmor;
+                    else if (my >= line + 35 && my <= line + 72) ah.mode = ah.mode.next();
+                    else if (my >= line + 76 && my <= line + 118) manager().setHudOpacity(sliderValue(mx, x + 20, contentW));
+                } else if (module instanceof FullbrightModule fb && my >= line && my <= line + 42) {
+                    fb.brightness = sliderValue(mx, x + 20, contentW);
+                    fb.apply(client);
+                } else if (module instanceof NoHurtCamModule nh && my >= line && my <= line + 42) {
+                    nh.reduction = sliderValue(mx, x + 20, contentW);
+                } else if (module instanceof TapeMouseModule tm) {
+                    if (my >= line && my <= line + 38) tm.mode = tm.mode.next();
+                    else if (my >= line + 42 && my <= line + 82) tm.ticks = Math.max(1, Math.min(20, sliderValue(mx, x + 20, contentW) / 5));
+                } else if (module instanceof CpsCounterModule cps) {
+                    if (my >= line && my <= line + 30) cps.countHeld = !cps.countHeld;
+                    else if (my >= line + 42 && my <= line + 82) cps.maxCps = Math.max(1, Math.min(20, sliderValue(mx, x + 20, contentW) / 5));
+                } else if (module instanceof FreeLookModule fl) {
+                    if (my >= line && my <= line + 42) fl.sensitivity = Math.max(1, sliderValue(mx, x + 20, contentW) / 10.0f);
+                    else if (my >= line + 46 && my <= line + 76) fl.invertY = !fl.invertY;
+                    else if (my >= line + 90 && my <= line + 130) fl.startRebind();
                 }
             }
 
-            if (module instanceof TapeMouseModule) {
-                TapeMouseModule tm = (TapeMouseModule) module;
-                if (my >= line && my <= line + 42) {
-                    tm.mode = tm.mode.next();
-                    return true;
-                }
-                if (my >= line + 62 && my <= line + 92) {
-                    tm.ticks = Math.max(1, Math.min(20,
-                        (int) (((mx - (x + 20)) / (double) (w - 40)) * 20) + 1));
-                    return true;
-                }
-            }
-
-            if ((module instanceof ArmorHudModule || module instanceof TargetEspModule) && my >= line + 62 && my <= line + 92) {
-                manager.setHudOpacity((int) (((mx - (x + 20)) / (double) (w - 40)) * 100));
-                return true;
-            }
-
-            if (module instanceof FullbrightModule fb && my >= line + 12 && my <= line + 40) {
-                fb.brightness = clamp((int) (((mx - (x + 20)) / (double) (w - 40)) * 100));
-                return true;
-            }
-
-            if (module instanceof NoHurtCamModule nh && my >= line + 12 && my <= line + 40) {
-                nh.reduction = clamp((int) (((mx - (x + 20)) / (double) (w - 40)) * 100));
-                return true;
-            }
-
-            if (module instanceof ArmorHudModule ah && my >= line && my <= line + 42) {
-                ah.mode = ah.mode.next();
-                return true;
-            }
-
-            if (module instanceof TargetEspModule te && my >= line && my <= line + 42) {
-                te.showTargetHud = !te.showTargetHud;
-                return true;
-            }
-
-            if (module instanceof FreeLookModule fl
-                && my >= line && my <= line + 42
-                && button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+            if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT && module instanceof FreeLookModule fl
+                && my >= line + 90 && my <= line + 140) {
                 fl.startRebind();
                 return true;
             }
@@ -703,27 +771,23 @@ public class ModuleManager {
             return super.mouseClicked(click, doubled);
         }
 
+        private int sliderValue(double mx, int x, int w) {
+            return Math.max(0, Math.min(100, (int) (((mx - x) / (double) w) * 100)));
+        }
+
         @Override
         public boolean keyPressed(KeyInput input) {
             int keyCode = input.key();
             if (module instanceof FreeLookModule fl && fl.rebinding) {
-                if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-                    fl.cancelRebind();
-                } else {
-                    fl.setBinding(InputUtil.Type.KEYSYM.createFromCode(keyCode));
-                }
+                if (keyCode == GLFW.GLFW_KEY_ESCAPE) fl.cancelRebind();
+                else fl.setBinding(InputUtil.Type.KEYSYM.createFromCode(keyCode));
                 return true;
             }
-
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                 client.setScreen(parent);
                 return true;
             }
             return super.keyPressed(input);
-        }
-
-        private int clamp(int n) {
-            return Math.max(0, Math.min(100, n));
         }
 
         @Override
@@ -732,7 +796,13 @@ public class ModuleManager {
         }
     }
 
+
     private static class VisualModule extends Module {
+        boolean optionA = true;
+        boolean optionB = true;
+        int valueA = 100;
+        int valueB = 100;
+
         VisualModule(String name, String category, String description) {
             super(name, category, description);
         }
@@ -742,6 +812,8 @@ public class ModuleManager {
         private int cps;
         private int lastClickTick = -100;
         private int tickCounter;
+        boolean countHeld = true;
+        int maxCps = 20;
 
         CpsCounterModule() {
             super("CPS Counter", "HUD", "Clicks per second");
@@ -796,6 +868,7 @@ public class ModuleManager {
 
     private static class TargetEspModule extends Module {
         boolean showTargetHud = true;
+        boolean showHealthBar = true;
         private ModuleManager manager;
 
         void setManager(ModuleManager manager) {
@@ -843,6 +916,7 @@ public class ModuleManager {
         }
 
         Mode mode = Mode.NUMBERS;
+        boolean showArmor = true;
 
         ArmorHudModule() {
             super("Armor HUD", "HUD", "Armor durability with color-coded values");
@@ -976,6 +1050,8 @@ public class ModuleManager {
 
     private static class FreeLookModule extends Module {
         boolean rebinding;
+        float sensitivity = 1.5f;
+        boolean invertY;
 
         FreeLookModule() {
             super("Free Look", "Player", "Hold a key to rotate the camera independently of the player");
