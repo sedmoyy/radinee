@@ -23,9 +23,10 @@ public final class FreeLookState {
         active = false;
     }
 
-    public static void update(double dx, double dy) {
-        yaw += (float) (dx * 0.15);
-        pitch += (float) (dy * 0.15);
+    public static void update(double dx, double dy, float sensitivity, boolean invertY) {
+        float factor = Math.max(0.1f, Math.min(5.0f, sensitivity)) * 0.1f;
+        yaw += (float) (dx * factor);
+        pitch += (float) (dy * factor * (invertY ? -1.0f : 1.0f));
         pitch = Math.max(-90.0f, Math.min(90.0f, pitch));
     }
 
