@@ -453,26 +453,6 @@ public class ModuleManager {
                 }
             }
 
-            String[] extraNames = {"Crosshair", "FPS Counter", "CPS Counter", "Keystrokes"};
-            for (String name : extraNames) {
-                Module extraModule = manager.get(name);
-                if (extraModule == null || !extraModule.isEnabled()) continue;
-                int[] p = manager.getHudPosition(name);
-                int ex = p[0], ey = p[1];
-                if ("Crosshair".equals(name) && ex < 0) {
-                    ex = (sw - 16) / 2;
-                    ey = (sh - 16) / 2;
-                }
-                int ew = "Keystrokes".equals(name) ? 94 : ("Crosshair".equals(name) ? 16 : 86);
-                int eh = "Keystrokes".equals(name) ? 64 : 18;
-                if (mx >= ex && mx <= ex + ew && my >= ey && my <= ey + eh) {
-                    dragging = name;
-                    offsetX = (int) mx - ex;
-                    offsetY = (int) my - ey;
-                    return true;
-                }
-            }
-
             Module armor = manager.get("Armor HUD");
             if (armor instanceof ArmorHudModule && armor.isEnabled()) {
                 int x = manager.getArmorHudX();
@@ -504,6 +484,26 @@ public class ModuleManager {
                 offsetX = (int) mx - targetX;
                 offsetY = (int) my - targetY;
                 return true;
+            }
+
+            String[] extraNames = {"Crosshair", "FPS Counter", "CPS Counter", "Keystrokes"};
+            for (String name : extraNames) {
+                Module extraModule = manager.get(name);
+                if (extraModule == null || !extraModule.isEnabled()) continue;
+                int[] p = manager.getHudPosition(name);
+                int ex = p[0], ey = p[1];
+                if ("Crosshair".equals(name) && ex < 0) {
+                    ex = (sw - 16) / 2;
+                    ey = (sh - 16) / 2;
+                }
+                int ew = "Keystrokes".equals(name) ? 94 : ("Crosshair".equals(name) ? 16 : 86);
+                int eh = "Keystrokes".equals(name) ? 64 : 18;
+                if (mx >= ex && mx <= ex + ew && my >= ey && my <= ey + eh) {
+                    dragging = name;
+                    offsetX = (int) mx - ex;
+                    offsetY = (int) my - ey;
+                    return true;
+                }
             }
 
             Module armor = manager.get("Armor HUD");
