@@ -6,10 +6,12 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.CharInput;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.hit.EntityHitResult;
@@ -350,12 +352,18 @@ public class ModuleManager {
         }
 
         @Override
-        public boolean charTyped(char chr, int modifiers) {
-            if (Character.isLetterOrDigit(chr) || chr == ' ' || chr == '-' || chr == '_') {
-                search += chr;
+        public boolean charTyped(CharInput input) {
+            String typed = input.asString();
+            if (!typed.isEmpty()) {
+                for (int i = 0; i < typed.length(); i++) {
+                    char chr = typed.charAt(i);
+                    if (Character.isLetterOrDigit(chr) || chr == ' ' || chr == '-' || chr == '_') {
+                        search += chr;
+                    }
+                }
                 return true;
             }
-            return super.charTyped(chr, modifiers);
+            return super.charTyped(input);
         }
 
         @Override
@@ -689,7 +697,7 @@ public class ModuleManager {
                 toggleRow(ctx, x, line, "Count while key is held", cps.countHeld);
                 slider(ctx, x, line + 46, w, "Max CPS", cps.maxCps * 5);
             } else if (module instanceof FreeLookModule fl) {
-                slider(ctx, x, line, w, "Camera sensitivity", fl.sensitivity * 10);
+                slider(ctx, x, line, w, "Camera sensitivity", Math.round(fl.sensitivity * 10));
                 toggleRow(ctx, x, line + 46, "Invert Y", fl.invertY);
                 ctx.drawTextWithShadow(textRenderer, "Hold key: " + fl.keyName(), x, line + 92, 0xFFD9F7FF);
                 ctx.drawTextWithShadow(textRenderer, "Right click the line below to rebind", x, line + 112, 0xFF87B7C8);
@@ -959,7 +967,13 @@ public class ModuleManager {
             int y = manager.getArmorHudY() < 0 ? client.getWindow().getScaledHeight() - 42 : manager.getArmorHudY();
 
             for (int i = 0; i < 4; i++) {
-                ItemStack stack = client.player.getInventory().getArmorStack(i);
+                EquipmentSlot slot = switch (i) {
+                    case 0 -> EquipmentSlot.HEAD;
+                    case 1 -> EquipmentSlot.CHEST;
+                    case 2 -> EquipmentSlot.LEGS;
+                    default -> EquipmentSlot.FEET;
+                };
+                ItemStack stack = client.player.getEquippedStack(slot);
                 int slotX = x + i * 38;
 
                 if (!stack.isEmpty()) {
