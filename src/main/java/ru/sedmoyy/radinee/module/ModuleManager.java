@@ -190,35 +190,59 @@ public class ModuleManager {
         int color = hudColor(0xFFFFFF);
         int bg = hudColor(0x101820);
 
-        if ("Crosshair".equals(name)) {
+        } else if ("Crosshair".equals(name)) {
+            VisualModule vm = module instanceof VisualModule v ? v : null;
+            if (vm != null && !vm.optionA) return;
+            int size = vm == null ? 7 : Math.max(2, Math.min(20, vm.valueA / 10));
+            int gap = vm == null ? 1 : Math.max(1, Math.min(8, vm.valueB / 15));
             int cx = x < 0 ? ctx.getScaledWindowWidth() / 2 : x;
             int cy = y < 0 ? ctx.getScaledWindowHeight() / 2 : y;
-            ctx.fill(cx - 1, cy - 7, cx + 1, cy + 7, color);
-            ctx.fill(cx - 7, cy - 1, cx + 7, cy + 1, color);
+            ctx.fill(cx - 1, cy - size - gap, cx + 1, cy - gap, color);
+            ctx.fill(cx - 1, cy + gap, cx + 1, cy + size + gap, color);
+            ctx.fill(cx - size - gap, cy - 1, cx - gap, cy + 1, color);
+            ctx.fill(cx + gap, cy - 1, cx + size + gap, cy + 1, color);
         } else if ("FPS Counter".equals(name)) {
-            ctx.fill(x, y, x + 86, y + 18, bg);
+            VisualModule vm = module instanceof VisualModule v ? v : null;
+            if (vm != null && !vm.optionA) return;
+            if (vm == null || vm.optionB) ctx.fill(x, y, x + 86, y + 18, bg);
             ctx.drawTextWithShadow(client.textRenderer, "FPS: " + client.getCurrentFps(), x + 5, y + 5, color);
         } else if ("CPS Counter".equals(name)) {
             ctx.fill(x, y, x + 86, y + 18, bg);
             ctx.drawTextWithShadow(client.textRenderer, "CPS: " + getCps(), x + 5, y + 5, color);
         } else if ("Keystrokes".equals(name)) {
-            ctx.fill(x, y, x + 94, y + 64, bg);
+            VisualModule vm = module instanceof VisualModule v ? v : null;
+            if (vm == null) return;
+            boolean showMouse = vm.optionA;
+            boolean showWasd = vm.optionB;
+            int scale = Math.max(50, Math.min(150, vm.valueA));
+            int keyW = Math.max(18, 28 * scale / 100);
+            int mouseW = Math.max(28, 44 * scale / 100);
+            int keyH = Math.max(12, 18 * scale / 100);
+            int gap = Math.max(2, 3 * scale / 100);
+            int totalW = keyW * 3 + gap * 2;
+            int totalH = keyH * (showMouse ? 3 : 2) + gap * 2;
+            ctx.fill(x, y, x + Math.max(94, totalW), y + totalH, bg);
             int c = hudColor(0xFFFFFF);
-            drawKey(ctx, client, "W", x + 31, y, client.options.forwardKey.isPressed(), c);
-            drawKey(ctx, client, "A", x, y + 21, client.options.leftKey.isPressed(), c);
-            drawKey(ctx, client, "S", x + 31, y + 21, client.options.backKey.isPressed(), c);
-            drawKey(ctx, client, "D", x + 62, y + 21, client.options.rightKey.isPressed(), c);
-            drawKey(ctx, client, "LMB", x, y + 42, client.options.attackKey.isPressed(), c);
-            drawKey(ctx, client, "RMB", x + 48, y + 42, client.options.useKey.isPressed(), c);
+            if (showWasd) {
+                drawKeyScaled(ctx, client, "W", x + keyW + gap, y, keyW, keyH, client.options.forwardKey.isPressed(), c);
+                drawKeyScaled(ctx, client, "A", x, y + keyH + gap, keyW, keyH, client.options.leftKey.isPressed(), c);
+                drawKeyScaled(ctx, client, "S", x + keyW + gap, y + keyH + gap, keyW, keyH, client.options.backKey.isPressed(), c);
+                drawKeyScaled(ctx, client, "D", x + (keyW + gap) * 2, y + keyH + gap, keyW, keyH, client.options.rightKey.isPressed(), c);
+            }
+            if (showMouse) {
+                int mouseY = showWasd ? y + (keyH + gap) * 2 : y;
+                drawKeyScaled(ctx, client, "LMB", x, mouseY, mouseW, keyH, client.options.attackKey.isPressed(), c);
+                drawKeyScaled(ctx, client, "RMB", x + mouseW + gap, mouseY, mouseW, keyH, client.options.useKey.isPressed(), c);
+            }
         }
     }
 
-    private void drawKey(DrawContext ctx, MinecraftClient client, String text, int x, int y, boolean pressed, int color) {
+    private void drawKeyScaled(DrawContext ctx, MinecraftClient client, String text, int x, int y, int width, int height, boolean pressed, int color) {
         int bg = hudColor(pressed ? 0x365A70 : 0x202830);
-        int width = text.length() > 1 ? 44 : 28;
-        ctx.fill(x, y, x + width, y + 18, bg);
+        ctx.fill(x, y, x + width, y + height, bg);
         int textWidth = client.textRenderer.getWidth(text);
-        ctx.drawTextWithShadow(client.textRenderer, text, x + (width - textWidth) / 2, y + 5, color);
+        int textY = y + Math.max(1, (height - 9) / 2);
+        ctx.drawTextWithShadow(client.textRenderer, text, x + (width - textWidth) / 2, textY, color);
     }
 
     private int getCps() {
@@ -822,9 +846,10 @@ public class ModuleManager {
         @Override
         public void onTick(MinecraftClient client) {
             tickCounter++;
-            if (client.options.attackKey.isPressed() && tickCounter - lastClickTick > 2) {
+            boolean clicking = client.options.attackKey.isPressed();
+            if (countHeld && clicking && tickCounter - lastClickTick > 2) {
                 lastClickTick = tickCounter;
-                cps = Math.min(20, cps + 1);
+                cps = Math.min(maxCps, cps + 1);
             } else if (cps > 0 && tickCounter % 20 == 0) {
                 cps--;
             }
@@ -900,8 +925,10 @@ public class ModuleManager {
                 x + 8, y + 6, hudColor(0xFFFFFF));
             ctx.drawTextWithShadow(client.textRenderer,
                 String.format("%.1f HP", health), x + 8, y + 20, hudColor(0x9DB5C4));
-            ctx.fill(x + 8, y + 34, x + 8 + barWidth, y + 38, hudColor(0x3A3A3A));
-            ctx.fill(x + 8, y + 34, x + 8 + filled, y + 38, hudColor(0x55FF55));
+            if (showHealthBar) {
+                ctx.fill(x + 8, y + 34, x + 8 + barWidth, y + 38, hudColor(0x3A3A3A));
+                ctx.fill(x + 8, y + 34, x + 8 + filled, y + 38, hudColor(0x55FF55));
+            }
         }
     }
 
@@ -927,6 +954,7 @@ public class ModuleManager {
         }
 
         void render(DrawContext ctx, MinecraftClient client) {
+            if (!showArmor) return;
             int x = manager.getArmorHudX();
             int y = manager.getArmorHudY() < 0 ? client.getWindow().getScaledHeight() - 42 : manager.getArmorHudY();
 
